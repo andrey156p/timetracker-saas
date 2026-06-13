@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:3000/api';
+const API_URL = '/api';
 
 const i18n = {
     ru: {
@@ -22,7 +22,7 @@ const i18n = {
     },
     en: {
         username: "Username", password: "Password", login_btn: "Login", logout: "Logout",
-        login_title: "Welcome", login_subtitle: "Enter your details to login", login_desc: "Time tracking for construction companies",
+        login_title: "Welcome", login_subtitle: "Enter your details to login", login_desc: "Time tracking for your business",
         tab_owner_clients: "Foremen Management", tab_owner_billing: "Billing Data", tab_owner_invoices: "Invoices", tab_owner_pass: "Change Password",
         tab_client_workers: "Workers", tab_client_shifts: "Shifts",
         add_foreman: "Create Foreman", foreman_name: "Name", foreman_login: "Login", foreman_pass: "Password",
@@ -42,7 +42,7 @@ const i18n = {
     },
     he: {
         username: "שם משתמש", password: "סיסמה", login_btn: "התחבר", logout: "התנתק",
-        login_title: "ברוך הבא", login_subtitle: "הזן את הפרטים שלך כדי להתחבר", login_desc: "מעקב אחר זמן עבודה לחברות בנייה",
+        login_title: "ברוך הבא", login_subtitle: "הזן את הפרטים שלך כדי להתחבר", login_desc: "מעקב אחר זמן לעסק שלך",
         tab_owner_clients: "ניהול מנהלי עבודה", tab_owner_billing: "חיוב", tab_owner_invoices: "חשבונות", tab_owner_pass: "שינוי סיסמה",
         tab_client_workers: "עובדים", tab_client_shifts: "משמרות",
         add_foreman: "צור מנהל עבודה", foreman_name: "שם", foreman_login: "שם משתמש", foreman_pass: "סיסמה",
@@ -69,7 +69,13 @@ const i18n = {
     }
 };
 
-let currentLang = localStorage.getItem('lang') || 'ru';
+let currentLang = localStorage.getItem('lang');
+if (!currentLang) {
+    const browserLang = navigator.language || navigator.userLanguage;
+    if (browserLang.startsWith('ru')) currentLang = 'ru';
+    else if (browserLang.startsWith('he')) currentLang = 'he';
+    else currentLang = 'en';
+}
 let userRole = localStorage.getItem('role') || null;
 let authToken = localStorage.getItem('token') || null;
 let clientId = localStorage.getItem('clientId') || null;

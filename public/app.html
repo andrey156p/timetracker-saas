@@ -68,7 +68,7 @@
     </div>
 
     <script>
-        const API_URL = 'http://localhost:3000/api';
+        const API_URL = '/api';
         const urlParams = new URLSearchParams(window.location.search);
         const clientId = urlParams.get('cid');
         let empId = urlParams.get('empId') || localStorage.getItem('empId') || null;
@@ -163,7 +163,6 @@
 
         async function init() {
             setLang(currentLang);
-            if (!clientId) return showError("Invalid Link");
             if (!empId) {
                 empId = prompt("Enter ID / Введите ваш ID (телефон):");
                 if (!empId) return showError("ID required");

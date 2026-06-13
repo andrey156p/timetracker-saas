@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>TimeTracker</title>
+    <link rel="manifest" href="manifest.json">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        body, html { overscroll-behavior: none; }
+        .btn-press:active { transform: scale(0.95); }
+        .disabled-btn { opacity: 0.5; filter: grayscale(100%); pointer-events: none; }
+        button, a { user-select: none; -webkit-user-select: none; cursor: pointer; caret-color: transparent; }
+    </style>
+</head>
+<body class="bg-gray-100 h-[100dvh] w-screen flex flex-col font-sans text-gray-800 overflow-hidden">
+
+    <div class="absolute top-4 right-4 flex space-x-3 z-50 bg-white/80 px-3 py-1 rounded-full shadow-sm backdrop-blur-sm" dir="ltr">
+        <button onclick="setLang('ru')" class="text-xl opacity-50 hover:opacity-100 transition-opacity" id="lang-ru">🇷🇺</button>
+        <button onclick="setLang('en')" class="text-xl opacity-50 hover:opacity-100 transition-opacity" id="lang-en">🇺🇸</button>
+        <button onclick="setLang('he')" class="text-xl opacity-50 hover:opacity-100 transition-opacity" id="lang-he">🇮🇱</button>
+        <button onclick="setLang('ar')" class="text-xl opacity-50 hover:opacity-100 transition-opacity" id="lang-ar">🇦🇪</button>
+    </div>
+
+    <div id="loader" class="flex-1 flex flex-col items-center justify-center">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+        <p class="text-gray-500" data-i18n="loading">Загрузка профиля...</p>
+    </div>
+
+    <div id="error-screen" class="hidden flex-1 flex-col items-center justify-center p-6 text-center">
+        <div class="text-red-500 text-6xl mb-4">⚠️</div>
+        <h2 class="text-2xl font-bold mb-2" data-i18n="error_title">Ошибка доступа</h2>
+        <p id="error-msg" class="text-gray-600">Ссылка недействительна.</p>
+    </div>
+
+    <div id="app-screen" class="hidden flex-1 flex-col p-4 w-full h-full max-w-md mx-auto relative pt-16">
+        
+        <div class="bg-white p-4 rounded-3xl shadow-sm mb-4 text-center shrink-0">
+            <p class="text-xs text-gray-400 uppercase tracking-widest font-bold mb-1" data-i18n="worker">РАБОТНИК</p>
+            <h1 id="emp-name" class="text-2xl font-bold text-gray-800">Имя</h1>
+            <p id="emp-id" class="text-sm text-gray-500 font-mono mt-1">ID</p>
+            <p id="emp-foreman" class="text-sm text-gray-600 mt-1 font-medium bg-gray-100 rounded-full inline-block px-3 py-1">Прораб: -</p>
+            <br>
+            <p id="emp-status" class="text-xs mt-2 inline-block px-3 py-1 rounded-full bg-blue-100 text-blue-800" data-i18n="status_ok">Геозона активна</p>
+        </div>
+
+        <div class="flex-1 flex flex-col items-center justify-center space-y-4 mb-4">
+            
+            <div id="timer-box" class="hidden flex-col items-center mb-2">
+                <p class="text-sm text-gray-500 uppercase font-bold tracking-wider" data-i18n="current_shift">Текущая смена</p>
+                <div id="timer-display" class="text-5xl font-black text-gray-800 tracking-tighter">00:00:00</div>
+            </div>
+
+            <button id="btn-in" onclick="logTime('Вход')" class="btn-press flex-1 w-full max-h-56 rounded-[3rem] bg-gradient-to-br from-green-400 to-green-600 shadow-xl text-white text-4xl font-black border-8 border-green-200/50 transition-all select-none">
+                <span data-i18n="btn_in">ВХОД</span>
+            </button>
+            <button id="btn-out" onclick="logTime('Выход')" class="btn-press flex-1 w-full max-h-56 rounded-[3rem] bg-gradient-to-br from-red-400 to-red-600 shadow-xl text-white text-4xl font-black border-8 border-red-200/50 transition-all disabled-btn select-none">
+                <span data-i18n="btn_out">ВЫХОД</span>
+            </button>
+        </div>
+        
+        <button onclick="openReports()" id="btn-reports" class="shrink-0 w-max mx-auto text-sm text-gray-500 underline text-center pb-2 cursor-pointer transition hover:text-gray-800 select-none" data-i18n="report_btn">Мои Отчёты</button>
+
+        <div id="action-status" class="absolute bottom-4 left-4 right-4 bg-gray-800 text-white p-4 rounded-2xl text-center text-sm font-medium shadow-2xl transform translate-y-24 transition-transform duration-300">
+            Сообщение
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:3000/api';
+        const urlParams = new URLSearchParams(window.location.search);
+        const clientId = urlParams.get('cid');
+        let empId = urlParams.get('empId') || localStorage.getItem('empId') || null;
+        if (empId) localStorage.setItem('empId', empId);
+        
+        // Auto-detect language if not set
+        let currentLang = localStorage.getItem('w_lang');
+        if (!currentLang) {
+            const browserLang = navigator.language.toLowerCase();
+            if (browserLang.startsWith('he')) currentLang = 'he';
+            else if (browserLang.startsWith('ar')) currentLang = 'ar';
+            else if (browserLang.startsWith('ru') || browserLang.startsWith('uk') || browserLang.startsWith('be')) currentLang = 'ru';
+            else currentLang = 'en';
+        }
+        
+        let shiftStartTime = null;
+        let timerInterval = null;
+
+        const i18n = {
+            ru: {
+                loading: "Загрузка профиля...", error_title: "Ошибка доступа",
+                worker: "РАБОТНИК", status_ok: "В зоне работы", status_mobile: "Передвижной режим",
+                btn_in: "ВХОД", btn_out: "ВЫХОД", current_shift: "Время на смене",
+                msg_gps_fetch: "Получение GPS...", msg_sending: "Отправка...",
+                msg_in_success: "Смена начата! Удачи.", msg_out_success: "Смена завершена. Отработано: ",
+                err_gps: "Нет доступа к GPS", err_network: "Ошибка сети",
+                req_gps: "Пожалуйста, включите GPS для начала работы.", req_arrive: "Вам необходимо сначала прибыть на объект. Ваша геопозиция не совпадает.",
+                report_btn: "Мои Отчёты", report_title: "Отчёт за месяц", report_total: "Всего часов:",
+                report_night: "Ночные часы:", report_sat: "Часы в субботу:", report_over: "Сверхурочные:",
+                report_dl: "Скачать Отчёт", close: "Закрыть", error: "Ошибка"
+            },
+            en: {
+                loading: "Loading profile...", error_title: "Access Error",
+                worker: "WORKER", status_ok: "In Work Zone", status_mobile: "Mobile Mode",
+                btn_in: "CLOCK IN", btn_out: "CLOCK OUT", current_shift: "Shift Duration",
+                msg_gps_fetch: "Fetching GPS...", msg_sending: "Sending...",
+                msg_in_success: "Shift started! Good luck.", msg_out_success: "Shift ended. Total time: ",
+                err_gps: "GPS access denied", err_network: "Network error",
+                req_gps: "Please enable GPS to clock in.", req_arrive: "You must arrive at the workplace first. Your location does not match the site.",
+                report_btn: "My Reports", report_title: "Monthly Report", report_total: "Total Hours:",
+                report_night: "Night Hours:", report_sat: "Saturday Hours:", report_over: "Overtime:",
+                report_dl: "Download Report", close: "Close", error: "Error"
+            },
+            he: {
+                loading: "טוען פרופיל...", error_title: "שגיאת גישה",
+                worker: "עובד", status_ok: "באזור העבודה", status_mobile: "מצב נייד",
+                btn_in: "כניסה", btn_out: "יציאה", current_shift: "משך משמרת",
+                msg_gps_fetch: "מאתר מיקום...", msg_sending: "שולח...",
+                msg_in_success: "משמרת התחילה! בהצלחה.", msg_out_success: "משמרת הסתיימה. זמן כולל: ",
+                err_gps: "גישה למיקום נדחתה", err_network: "שגיאת רשת",
+                req_gps: "אנא אפשר שירותי מיקום כדי להיכנס למשמרת.", req_arrive: "עליך להגיע לאתר העבודה תחילה. המיקום שלך אינו תואם.",
+                report_btn: "הדוחות שלי", report_title: "דוח חודשי", report_total: "סך הכל שעות:",
+                report_night: "שעות לילה:", report_sat: "שעות שבת:", report_over: "שעות נוספות:",
+                report_dl: "הורד דוח", close: "סגור", error: "שגיאה"
+            },
+            ar: {
+                loading: "جاري تحميل الملف الشخصي...", error_title: "خطأ في الوصول",
+                worker: "عامل", status_ok: "في منطقة العمل", status_mobile: "وضع التنقل",
+                btn_in: "دخول", btn_out: "خروج", current_shift: "مدة الوردية",
+                msg_gps_fetch: "الحصول على GPS...", msg_sending: "إرسال...",
+                msg_in_success: "بدأت الوردية! حظا موفقا.", msg_out_success: "انتهت الوردية. الوقت الإجمالي: ",
+                err_gps: "تم رفض الوصول إلى GPS", err_network: "خطأ في الشبكة",
+                req_gps: "يرجى تمكين GPS لبدء العمل.", req_arrive: "يجب أن تصل إلى موقع العمل أولاً. موقعك لا يطابق الموقع المخصص.",
+                report_btn: "تقاريري", report_title: "تقرير شهري", report_total: "إجمالي الساعات:",
+                report_night: "ساعات ليلية:", report_sat: "ساعات السبت:", report_over: "عمل إضافي:",
+                report_dl: "تحميل التقرير", close: "إغلاق", error: "خطأ"
+            }
+        };
+
+        let currentForemanName = '';
+
+        function setLang(lang) {
+            currentLang = lang;
+            localStorage.setItem('w_lang', lang);
+            document.documentElement.dir = (lang === 'he' || lang === 'ar') ? 'rtl' : 'ltr';
+            
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if(i18n[lang][key]) el.textContent = i18n[lang][key];
+            });
+
+            if (currentForemanName) {
+                const fLabels = { ru: 'Прораб', en: 'Foreman', he: 'מנהל עבודה', ar: 'مدير' };
+                document.getElementById('emp-foreman').textContent = (fLabels[currentLang] || 'Foreman') + ': ' + currentForemanName;
+            }
+
+            document.getElementById('lang-ru').style.opacity = lang === 'ru' ? '1' : '0.5';
+            document.getElementById('lang-en').style.opacity = lang === 'en' ? '1' : '0.5';
+            document.getElementById('lang-he').style.opacity = lang === 'he' ? '1' : '0.5';
+            document.getElementById('lang-ar').style.opacity = lang === 'ar' ? '1' : '0.5';
+        }
+
+        async function init() {
+            setLang(currentLang);
+            if (!clientId) return showError("Invalid Link");
+            if (!empId) {
+                empId = prompt("Enter ID / Введите ваш ID (телефон):");
+                if (!empId) return showError("ID required");
+                localStorage.setItem('empId', empId);
+            }
+
+            try {
+                const res = await fetch(`${API_URL}/worker/geofence/${empId}`);
+                const r = await res.json();
+                
+                if (r.success) {
+                    document.getElementById('loader').classList.add('hidden');
+                    document.getElementById('app-screen').classList.remove('hidden');
+                    document.getElementById('app-screen').classList.add('flex');
+                    document.getElementById('emp-name').textContent = r.name;
+                    document.getElementById('emp-id').textContent = 'ID: ' + r.id;
+                    
+                    currentForemanName = r.foremanName;
+                    const fLabels = { ru: 'Прораб', en: 'Foreman', he: 'מנהל עבודה', ar: 'مدير' };
+                    document.getElementById('emp-foreman').textContent = (fLabels[currentLang] || 'Foreman') + ': ' + currentForemanName;
+                    
+                    if (r.isMobile) document.getElementById('emp-status').textContent = i18n[currentLang].status_mobile;
+                    else document.getElementById('emp-status').textContent = i18n[currentLang].status_ok;
+
+                    // Setup state
+                    if (r.lastLog && r.lastLog.action === 'Вход') {
+                        shiftStartTime = new Date(r.lastLog.time);
+                        setBtnState(true); // true = clocked in
+                    } else {
+                        shiftStartTime = null;
+                        setBtnState(false);
+                    }
+
+                } else {
+                    localStorage.removeItem('empId');
+                    showError(r.error || "Работник не найден");
+                }
+            } catch (e) {
+                showError(i18n[currentLang].err_network);
+            }
+        }
+
+        function setBtnState(isClockedIn) {
+            const btnIn = document.getElementById('btn-in');
+            const btnOut = document.getElementById('btn-out');
+            const timerBox = document.getElementById('timer-box');
+            
+            if (isClockedIn) {
+                btnIn.classList.add('disabled-btn');
+                btnOut.classList.remove('disabled-btn');
+                timerBox.classList.remove('hidden');
+                timerBox.classList.add('flex');
+                startTimer();
+            } else {
+                btnIn.classList.remove('disabled-btn');
+                btnOut.classList.add('disabled-btn');
+                timerBox.classList.remove('flex');
+                timerBox.classList.add('hidden');
+                stopTimer();
+            }
+        }
+
+        function startTimer() {
+            if(timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                if(!shiftStartTime) return;
+                const diff = Math.floor((new Date() - shiftStartTime) / 1000);
+                const h = String(Math.floor(diff / 3600)).padStart(2, '0');
+                const m = String(Math.floor((diff % 3600) / 60)).padStart(2, '0');
+                const s = String(diff % 60).padStart(2, '0');
+                document.getElementById('timer-display').textContent = `${h}:${m}:${s}`;
+            }, 1000);
+        }
+
+        function stopTimer() {
+            if(timerInterval) clearInterval(timerInterval);
+            document.getElementById('timer-display').textContent = `00:00:00`;
+        }
+
+        function formatDuration(ms) {
+            const diff = Math.floor(ms / 1000);
+            const h = Math.floor(diff / 3600);
+            const m = Math.floor((diff % 3600) / 60);
+            return `${h}h ${m}m`;
+        }
+
+        function showError(msg) {
+            document.getElementById('loader').classList.add('hidden');
+            document.getElementById('error-screen').classList.remove('hidden');
+            document.getElementById('error-screen').classList.add('flex');
+            document.getElementById('error-msg').textContent = msg;
+        }
+
+        function showToast(msg, isError = false) {
+            const el = document.getElementById('action-status');
+            el.textContent = msg;
+            el.className = `absolute bottom-4 left-4 right-4 text-white p-4 rounded-2xl text-center text-sm font-medium shadow-2xl transform transition-transform duration-300 z-50 ${isError ? 'bg-red-600' : 'bg-gray-800'}`;
+            el.style.transform = 'translateY(0)';
+            setTimeout(() => {
+                el.style.transform = 'translateY(150%)';
+            }, 4000);
+        }
+
+        function getGPS() {
+            return new Promise((resolve, reject) => {
+                if (!navigator.geolocation) return reject(i18n[currentLang].err_gps);
+                navigator.geolocation.getCurrentPosition(
+                    pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+                    err => reject(i18n[currentLang].err_gps),
+                    { enableHighAccuracy: true, timeout: 10000 }
+                );
+            });
+        }
+
+        async function logTime(action) {
+            // Prevent double taps
+            if (action === 'Вход' && shiftStartTime) return;
+            if (action === 'Выход' && !shiftStartTime) return;
+
+            Swal.fire({
+                title: i18n[currentLang].msg_gps_fetch,
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+
+            try {
+                let coords = { lat: 0, lng: 0 };
+                try { 
+                    coords = await getGPS(); 
+                } catch(e) {
+                    Swal.fire({ icon: 'warning', title: 'GPS', text: i18n[currentLang].req_gps, confirmButtonColor: '#3b82f6' });
+                    return;
+                }
+
+                Swal.update({ title: i18n[currentLang].msg_sending });
+                
+                const res = await fetch(`${API_URL}/worker/log`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ empId, action, lat: coords.lat, lng: coords.lng })
+                });
+                const r = await res.json();
+                
+                if (r.success) {
+                    if (action === 'Вход') {
+                        shiftStartTime = new Date();
+                        setBtnState(true);
+                        Swal.fire({ icon: 'success', title: 'OK', text: i18n[currentLang].msg_in_success, timer: 2000, showConfirmButton: false });
+                    } else {
+                        const duration = formatDuration(new Date() - shiftStartTime);
+                        shiftStartTime = null;
+                        setBtnState(false);
+                        Swal.fire({ icon: 'success', title: 'OK', text: i18n[currentLang].msg_out_success + duration, timer: 3000, showConfirmButton: false });
+                    }
+                } else {
+                    if (r.error === 'Вы вне зоны объекта!') {
+                        Swal.fire({ icon: 'error', title: i18n[currentLang].error, text: i18n[currentLang].req_arrive, confirmButtonColor: '#ef4444' });
+                    } else {
+                        Swal.fire({ icon: 'error', title: i18n[currentLang].error, text: r.error, confirmButtonColor: '#ef4444' });
+                    }
+                }
+            } catch (e) {
+                Swal.fire({ icon: 'error', title: i18n[currentLang].error, text: i18n[currentLang].err_network, confirmButtonColor: '#ef4444' });
+            }
+        }
+
+        async function openReports() {
+            const month = new Date().toISOString().slice(0, 7);
+            Swal.fire({
+                title: i18n[currentLang].loading,
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+
+            try {
+                const res = await fetch(`${API_URL}/worker/report/${empId}?month=${month}`);
+                const r = await res.json();
+                if (r.success) {
+                    let html = `
+                        <div class="text-left text-sm space-y-3 mt-4 text-gray-700" dir="${document.documentElement.dir}">
+                            <div class="flex justify-between border-b border-gray-200 pb-2"><span>${i18n[currentLang].report_total}</span> <strong class="text-lg">${r.totalHours}h</strong></div>
+                            <div class="flex justify-between border-b border-gray-200 pb-2"><span>${i18n[currentLang].report_over}</span> <strong class="text-blue-600">${r.overtimeHours}h</strong></div>
+                            <div class="flex justify-between border-b border-gray-200 pb-2"><span>${i18n[currentLang].report_sat}</span> <strong class="text-purple-600">${r.saturdayHours}h</strong></div>
+                            <div class="flex justify-between border-b border-gray-200 pb-2"><span>${i18n[currentLang].report_night}</span> <strong class="text-indigo-600">${r.nightHours}h</strong></div>
+                        </div>
+                    `;
+                    Swal.fire({
+                        title: i18n[currentLang].report_title + " (" + month + ")",
+                        html: html,
+                        showCancelButton: true,
+                        confirmButtonText: i18n[currentLang].report_dl,
+                        cancelButtonText: i18n[currentLang].close,
+                        confirmButtonColor: '#10b981',
+                        cancelButtonColor: '#6b7280'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            downloadReportCSV(r.dailyData, month, r);
+                        }
+                    });
+                } else {
+                    Swal.fire({ icon: 'error', title: i18n[currentLang].error, text: r.error });
+                }
+            } catch(e) {
+                Swal.fire({ icon: 'error', title: i18n[currentLang].error, text: i18n[currentLang].err_network });
+            }
+        }
+
+        function downloadReportCSV(dailyData, month, totals) {
+            let csv = '\uFEFF'; // BOM for Excel
+            csv += `Date;Hours\n`;
+            for (let d in dailyData) {
+                csv += `${d};${dailyData[d].toFixed(2)}\n`;
+            }
+            csv += `\n${i18n[currentLang].report_total};${totals.totalHours}\n`;
+            csv += `${i18n[currentLang].report_over};${totals.overtimeHours}\n`;
+            csv += `${i18n[currentLang].report_sat};${totals.saturdayHours}\n`;
+            csv += `${i18n[currentLang].report_night};${totals.nightHours}\n`;
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            const url = URL.createObjectURL(blob);
+            link.setAttribute("href", url);
+            link.setAttribute("download", `Report_${empId}_${month}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        init();
+
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js');
+        }
+    </script>
+</body>
+</html>

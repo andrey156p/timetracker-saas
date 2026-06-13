@@ -1,0 +1,95 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model SaaSSettings {
+  id           Int     @id @default(1)
+  tariffMode   String  @default("per_user") // "per_user" or "per_hour"
+  pricePerUser Float   @default(100.0)
+  pricePerHour Float   @default(1.5)
+}
+
+model Client {
+  id        String     @id @default(uuid())
+  username  String     @unique
+  password  String
+  name      String
+  isActive  Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  
+  shiftMorningStart String @default("08:00")
+  shiftMorningEnd   String @default("16:00")
+  shiftEveningStart String @default("16:00")
+  shiftEveningEnd   String @default("00:00")
+  shiftNightStart   String @default("00:00")
+  shiftNightEnd     String @default("08:00")
+
+  tariffMode   String @default("per_user") // "per_user" or "per_hour"
+  pricePerUser Float  @default(0.0)
+  pricePerHour Float  @default(0.0)
+
+  geofences Geofence[]
+  schedules Schedule[]
+  logs      Log[]
+  invoices  Invoice[]
+}
+
+model Geofence {
+  id        Int        @id @default(autoincrement())
+  clientId  String
+  empId     String     @unique
+  empName   String
+  lat       Float?
+  lng       Float?
+  radius    Float?
+  isMobile  Boolean    @default(false)
+  
+  client    Client     @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  
+  logs      Log[]
+  schedules Schedule[]
+}
+
+model Schedule {
+  id         Int      @id @default(autoincrement())
+  dayOfWeek  Int      
+  shiftType  String   // 'morning', 'evening', 'night', 'none'
+  
+  geofenceId Int
+  geofence   Geofence @relation(fields: [geofenceId], references: [id], onDelete: Cascade)
+  
+  clientId   String
+  client     Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@unique([geofenceId, dayOfWeek])
+}
+
+model Log {
+  id         Int      @id @default(autoincrement())
+  empId      String
+  geofenceId Int?
+  geofence   Geofence? @relation(fields: [geofenceId], references: [id], onDelete: Cascade)
+  action     String   // "Вход" / "Выход"
+  lat        Float?
+  lng        Float?
+  dateTime   DateTime @default(now())
+  
+  clientId   String
+  client     Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+}
+
+model Invoice {
+  id        Int      @id @default(autoincrement())
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  startDate DateTime
+  endDate   DateTime
+  amount    Float
+  status    String   @default("pending") // "pending" or "paid"
+  createdAt DateTime @default(now())
+}

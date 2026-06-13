@@ -633,13 +633,6 @@ if (require.main === module) {
         }
         console.log(`TimeTracker SaaS running on http://localhost:${PORT}`);
     });
-} else {
-    // For Vercel serverless
-    app.listen = async function() {
-        const settings = await prisma.saaSSettings.findFirst();
-        if (!settings) await prisma.saaSSettings.create({ data: {} });
-    };
-    app.listen(); // Initialize DB settings on cold start
 }
 
 module.exports = app;

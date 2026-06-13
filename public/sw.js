@@ -1,10 +1,9 @@
-const CACHE_NAME = 'timetracker-cache-v10';
+const CACHE_NAME = 'timetracker-cache-v11';
 const urlsToCache = [
   './',
   './app.html',
-  './index.js',
   './manifest.json',
-  'https://cdn.tailwindcss.com'
+  './app_icon.png'
 ];
 
 self.addEventListener('install', event => {

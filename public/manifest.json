@@ -1,15 +1,16 @@
 {
-    "name": "TimeTracker Worker",
+    "name": "TimeTracker",
     "short_name": "TimeTracker",
     "start_url": "./app.html",
     "display": "standalone",
-    "background_color": "#ffffff",
+    "background_color": "#f3f4f6",
     "theme_color": "#2563eb",
     "icons": [
         {
-            "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%232563eb' d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z'/%3E%3C/svg%3E",
-            "sizes": "192x192",
-            "type": "image/svg+xml"
+            "src": "app_icon.png",
+            "sizes": "192x192 512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
         }
     ]
 }

@@ -3,9 +3,9 @@ const API_URL = '/api';
 const i18n = {
     ru: {
         username: "Логин", password: "Пароль", login_btn: "Войти", logout: "Выйти",
-        tab_owner_clients: "Управление прорабами", tab_owner_billing: "Биллинг", tab_owner_invoices: "Счета", tab_owner_pass: "Смена пароля",
+        tab_owner_clients: "Управление руководителями", tab_owner_billing: "Биллинг", tab_owner_invoices: "Счета", tab_owner_pass: "Смена пароля",
         tab_client_workers: "Работники", tab_client_shifts: "Смены",
-        add_foreman: "Создать прораба", foreman_name: "Имя/Название", foreman_login: "Логин", foreman_pass: "Пароль",
+        add_foreman: "Создать руководителя", foreman_name: "Имя/Название", foreman_login: "Логин", foreman_pass: "Пароль",
         save: "Сохранить", action: "Действие", block: "Заблокировать", unblock: "Разблокировать",
         period: "Период", from: "От", to: "До", load: "Загрузить", clear_btn: "Сброс", all_workers: "Все работники",
         workers: "Работников", hours: "Всего Часов", active: "Активен", old_pass: "Старый пароль", new_pass: "Новый пароль",
@@ -26,9 +26,9 @@ const i18n = {
     en: {
         username: "Username", password: "Password", login_btn: "Login", logout: "Logout",
         login_title: "Welcome", login_subtitle: "Enter your details to login", login_desc: "Time tracking for your business",
-        tab_owner_clients: "Foremen Management", tab_owner_billing: "Billing Data", tab_owner_invoices: "Invoices", tab_owner_pass: "Change Password",
+        tab_owner_clients: "Managers", tab_owner_billing: "Billing Data", tab_owner_invoices: "Invoices", tab_owner_pass: "Change Password",
         tab_client_workers: "Workers", tab_client_shifts: "Shifts",
-        add_foreman: "Create Foreman", foreman_name: "Name", foreman_login: "Login", foreman_pass: "Password",
+        add_foreman: "Create Manager", foreman_name: "Name", foreman_login: "Login", foreman_pass: "Password",
         save: "Save", action: "Action", block: "Block", unblock: "Unblock",
         period: "Period", from: "From", to: "To", load: "Load", clear_btn: "Reset", all_workers: "All workers",
         workers: "Workers", hours: "Total Hours", active: "Active", old_pass: "Old Password", new_pass: "New Password",

@@ -14,7 +14,7 @@ const JWT_SECRET = 'SUPER_SECRET_TOKEN_V2';
 let OWNER_PASSWORD = 'SuperOwner999';
 
 // Static files
-app.use(express.static(path.join(__dirname)));
+app.use(express.static(path.join(__dirname, 'public')));
 
 // --- Middlewares ---
 function authOwner(req, res, next) {

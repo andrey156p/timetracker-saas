@@ -18,7 +18,10 @@ const i18n = {
         off: "- Вых -", hours_worked: "Часы отработанные работниками", choose_period: "Выберите период...", no_workers: "Нет работников", loading: "Загрузка...",
         date: "Дата", id: "ID", night_hours: "Ночные", saturday_hours: "Суббота", overtime_hours: "Сверхурочные", deleted_worker: "Удаленный работник", total_sum_hours: "Всего часов за период:", download_report: "Скачать Отчёт (Excel)", shift_times: "Вход/Выход",
         status: "Статус", print: "Печать", paid: "ОПЛАЧЕН", pending: "ОЖИДАЕТ",
-        invoices_title: "Выставленные счета (Invoices)", amount: "Сумма"
+        invoices_title: "Выставленные счета (Invoices)", amount: "Сумма",
+        qr_print: "QR / Печать", copy_link: "Копировать линк", reset_pass: "Пароль", tariff: "Тариф",
+        per_hour: "За час", per_worker: "За работника", block_btn: "Блок", unblock_btn: "Разблок", copied: "Скопировано!",
+        qr_scan_text: "Отсканируйте этот код камерой вашего телефона для установки приложения учета времени."
     },
     en: {
         username: "Username", password: "Password", login_btn: "Login", logout: "Logout",
@@ -38,7 +41,10 @@ const i18n = {
         off: "- Off -", hours_worked: "Hours worked by employees", choose_period: "Select period...", no_workers: "No workers", loading: "Loading...",
         date: "Date", id: "ID", night_hours: "Night", saturday_hours: "Saturday", overtime_hours: "Overtime", deleted_worker: "Deleted Worker", total_sum_hours: "Total hours for period:", download_report: "Download Report (Excel)", shift_times: "In/Out",
         status: "Status", print: "Print", paid: "PAID", pending: "PENDING",
-        invoices_title: "Invoices", amount: "Amount"
+        invoices_title: "Invoices", amount: "Amount",
+        qr_print: "QR / Print", copy_link: "Copy Link", reset_pass: "Password", tariff: "Tariff",
+        per_hour: "Per hour", per_worker: "Per worker", block_btn: "Block", unblock_btn: "Unblock", copied: "Copied!",
+        qr_scan_text: "Scan this code with your phone camera to install the time tracking app."
     },
     he: {
         username: "שם משתמש", password: "סיסמה", login_btn: "התחבר", logout: "התנתק",
@@ -65,7 +71,10 @@ const i18n = {
         pending: "ממתין",
         total_sum_hours: "סה\"כ שעות לתקופה זו:",
         download_report: "הורד דוח (Excel)",
-        shift_times: "כניסה/יציאה"
+        shift_times: "כניסה/יציאה",
+        qr_print: "QR / הדפס", copy_link: "העתק קישור", reset_pass: "סיסמה", tariff: "תעריף",
+        per_hour: "לשעה", per_worker: "לעובד", block_btn: "חסום", unblock_btn: "שחרר", copied: "הועתק!",
+        qr_scan_text: "סרוק קוד זה במצלמת הטלפון שלך כדי להתקין את אפליקציית מעקב הזמן."
     }
 };
 
@@ -222,9 +231,9 @@ async function renderOwnerClients() {
     <div class="bg-white p-4 rounded shadow mb-6 border">
         <h3 class="font-bold mb-2" data-i18n="add_foreman"></h3>
         <div class="flex flex-wrap gap-2">
-            <input id="new-f-name" class="border p-1 rounded" placeholder="Имя">
-            <input id="new-f-login" class="border p-1 rounded" placeholder="Логин">
-            <input id="new-f-pass" class="border p-1 rounded" placeholder="Пароль">
+            <input id="new-f-name" class="border p-1 rounded" placeholder="${i18n[currentLang].foreman_name}">
+            <input id="new-f-login" class="border p-1 rounded" placeholder="${i18n[currentLang].foreman_login}">
+            <input id="new-f-pass" class="border p-1 rounded" placeholder="${i18n[currentLang].foreman_pass}">
             <button onclick="createForeman()" class="bg-blue-600 text-white px-3 py-1 rounded" data-i18n="save"></button>
         </div>
     </div>
@@ -238,16 +247,16 @@ async function renderOwnerClients() {
         <tbody>
     `;
     r.clients.forEach(c => {
-        let currentTariffStr = c.tariffMode === 'per_hour' ? `За час (${c.pricePerHour} ₪)` : `За работника (${c.pricePerUser} ₪)`;
+        let currentTariffStr = c.tariffMode === 'per_hour' ? `${i18n[currentLang].per_hour} (${c.pricePerHour} ₪)` : `${i18n[currentLang].per_worker} (${c.pricePerUser} ₪)`;
         html += `<tr class="border-b hover:bg-gray-50">
             <td class="p-2">${c.name}</td>
             <td class="p-2">${c.username}</td>
             <td class="p-2">${c.isActive ? '✅' : '❌'}</td>
             <td class="p-2">
-                <button onclick="toggleForeman('${c.id}')" class="text-blue-600 underline text-xs mr-2">${c.isActive ? 'Блок' : 'Разблок'}</button>
-                <button onclick="resetForemanPass('${c.id}')" class="text-orange-600 underline text-xs mr-2">Пароль</button>
-                <button onclick="openTariffModal('${c.id}', '${c.tariffMode}', ${c.pricePerUser}, ${c.pricePerHour})" class="text-green-600 underline text-xs mr-2">Тариф</button>
-                <button onclick="deleteForeman('${c.id}')" class="text-red-600 underline text-xs mr-2" data-i18n="delete">Удалить</button>
+                <button onclick="toggleForeman('${c.id}')" class="text-blue-600 underline text-xs mr-2">${c.isActive ? i18n[currentLang].block_btn : i18n[currentLang].unblock_btn}</button>
+                <button onclick="resetForemanPass('${c.id}')" class="text-orange-600 underline text-xs mr-2">${i18n[currentLang].reset_pass}</button>
+                <button onclick="openTariffModal('${c.id}', '${c.tariffMode}', ${c.pricePerUser}, ${c.pricePerHour})" class="text-green-600 underline text-xs mr-2">${i18n[currentLang].tariff}</button>
+                <button onclick="deleteForeman('${c.id}')" class="text-red-600 underline text-xs mr-2" data-i18n="delete"></button>
                 <span class="text-xs text-gray-500 font-mono bg-gray-100 px-2 py-1 rounded">${currentTariffStr}</span>
             </td>
         </tr>`;
@@ -549,10 +558,10 @@ async function renderClientWorkers() {
             <td class="p-2 text-xs text-gray-500">${e.lat}, ${e.lng} (R:${e.radius}m)</td>
             <td class="p-2"><input type="checkbox" onchange="toggleMobile('${e.empId}', this.checked)" ${e.isMobile ? 'checked' : ''}></td>
             <td class="p-2">
-                <button onclick="navigator.clipboard.writeText('${link}'); alert('Скопировано!')" class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs mb-1">Копировать линк</button>
-                <button onclick="printWorkerQR('${e.empName}', '${link}')" class="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs border">QR / Печать</button>
+                <button onclick="navigator.clipboard.writeText('${link}'); alert('${i18n[currentLang].copied}')" class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs mb-1">${i18n[currentLang].copy_link}</button>
+                <button onclick="printWorkerQR('${e.empName}', '${link}')" class="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs border">${i18n[currentLang].qr_print}</button>
             </td>
-            <td class="p-2"><button onclick="deleteWorker('${e.empId}')" class="text-red-600 underline text-xs" data-i18n="delete">Удалить</button></td>
+            <td class="p-2"><button onclick="deleteWorker('${e.empId}')" class="text-red-600 underline text-xs" data-i18n="delete"></button></td>
         </tr>`;
     });
     html += `</tbody></table>`;
@@ -566,9 +575,9 @@ function printWorkerQR(name, link) {
     printWindow.document.write(`<html><head><title>QR Code - ${name}</title>`);
     printWindow.document.write(`<style>body { font-family: sans-serif; text-align: center; padding: 40px; } h2 { margin-bottom: 20px; } img { margin: 0 auto; border: 1px solid #ccc; padding: 10px; border-radius: 8px; } p { margin-top: 20px; font-size: 12px; color: #666; word-wrap: break-word; }</style>`);
     printWindow.document.write('</head><body>');
-    printWindow.document.write(`<h2>Работнику: ${name}</h2>`);
+    printWindow.document.write(`<h2>${i18n[currentLang].worker || 'Worker'}: ${name}</h2>`);
     printWindow.document.write(`<img src="${qrUrl}" alt="QR Code" onload="setTimeout(() => window.print(), 500)" />`);
-    printWindow.document.write(`<p>Отсканируйте этот код камерой вашего телефона для установки приложения учета времени.</p>`);
+    printWindow.document.write(`<p>${i18n[currentLang].qr_scan_text || 'Scan this code with your phone camera to install the time tracking app.'}</p>`);
     printWindow.document.write(`<p style="font-size: 10px; opacity: 0.6;">${link}</p>`);
     printWindow.document.write('</body></html>');
     printWindow.document.close();

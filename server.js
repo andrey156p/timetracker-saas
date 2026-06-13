@@ -623,12 +623,23 @@ app.post('/api/worker/log', async (req, res) => {
     } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-const PORT = 3000;
-app.listen(PORT, async () => {
-    // Ensure default settings exist
-    const settings = await prisma.saaSSettings.findFirst();
-    if (!settings) {
-        await prisma.saaSSettings.create({ data: {} });
-    }
-    console.log(`TimeTracker SaaS running on http://localhost:${PORT}`);
-});
+const PORT = process.env.PORT || 3000;
+if (require.main === module) {
+    app.listen(PORT, async () => {
+        // Ensure default settings exist
+        const settings = await prisma.saaSSettings.findFirst();
+        if (!settings) {
+            await prisma.saaSSettings.create({ data: {} });
+        }
+        console.log(`TimeTracker SaaS running on http://localhost:${PORT}`);
+    });
+} else {
+    // For Vercel serverless
+    app.listen = async function() {
+        const settings = await prisma.saaSSettings.findFirst();
+        if (!settings) await prisma.saaSSettings.create({ data: {} });
+    };
+    app.listen(); // Initialize DB settings on cold start
+}
+
+module.exports = app;

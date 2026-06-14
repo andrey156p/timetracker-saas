@@ -514,7 +514,20 @@ app.post('/api/client/logs/manual', authClient, async (req, res) => {
 
         const geofence = await prisma.geofence.findUnique({ where: { empId } });
 
+        const dateStart = new Date(yyyy, mm - 1, dd, 0, 0, 0);
+        const dateEnd = new Date(yyyy, mm - 1, dd, 23, 59, 59, 999);
+
         await prisma.$transaction([
+            prisma.log.deleteMany({
+                where: {
+                    empId,
+                    clientId: req.user.clientId,
+                    dateTime: {
+                        gte: dateStart,
+                        lte: dateEnd
+                    }
+                }
+            }),
             prisma.log.create({
                 data: {
                     empId,

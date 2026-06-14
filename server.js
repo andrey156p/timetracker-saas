@@ -247,17 +247,38 @@ app.get('/api/client/employees', authClient, async (req, res) => {
 });
 
 app.post('/api/client/employees', authClient, async (req, res) => {
-    const { empId, empName, lat, lng, radius, isMobile } = req.body;
+    const { empId, empName, lat, lng, radius, isMobile, smS, smE, seS, seE, snS, snE } = req.body;
     try {
         await prisma.geofence.create({
             data: {
                 clientId: req.user.clientId,
-                empId, empName, lat: parseFloat(lat)||0, lng: parseFloat(lng)||0, radius: parseFloat(radius)||0, isMobile: !!isMobile
+                empId, empName, lat: parseFloat(lat)||0, lng: parseFloat(lng)||0, radius: parseFloat(radius)||0, isMobile: !!isMobile,
+                shiftMorningStart: smS || null, shiftMorningEnd: smE || null,
+                shiftEveningStart: seS || null, shiftEveningEnd: seE || null,
+                shiftNightStart: snS || null, shiftNightEnd: snE || null
             }
         });
         res.json({ success: true });
     } catch (e) {
         res.status(400).json({ success: false, error: 'Работник с таким ID уже существует' });
+    }
+});
+
+app.put('/api/client/employees/:empId', authClient, async (req, res) => {
+    const { empName, lat, lng, radius, isMobile, smS, smE, seS, seE, snS, snE } = req.body;
+    try {
+        await prisma.geofence.update({
+            where: { empId: req.params.empId },
+            data: {
+                empName, lat: parseFloat(lat)||0, lng: parseFloat(lng)||0, radius: parseFloat(radius)||0, isMobile: !!isMobile,
+                shiftMorningStart: smS || null, shiftMorningEnd: smE || null,
+                shiftEveningStart: seS || null, shiftEveningEnd: seE || null,
+                shiftNightStart: snS || null, shiftNightEnd: snE || null
+            }
+        });
+        res.json({ success: true });
+    } catch (e) {
+        res.status(400).json({ success: false, error: 'Ошибка сохранения работника' });
     }
 });
 
@@ -426,10 +447,17 @@ app.get('/api/client/hours', authClient, async (req, res) => {
                             empDaily[log.empId][shiftDateKey].saturdayHours += diffHours;
                         }
                         
-                        // Night hours overlap (using local timezone)
+                        // Night hours overlap (using local timezone and individual worker shift if present)
                         const offsetMs = getLocalOffsetMs(inTime);
                         let mStart = new Date(inTime.getTime() + offsetMs);
                         let mOut = new Date(outTime.getTime() + offsetMs);
+
+                        const actualShiftNs = (!isDeleted && log.geofence.shiftNightStart) ? log.geofence.shiftNightStart : (client.shiftNightStart || "22:00");
+                        const actualShiftNe = (!isDeleted && log.geofence.shiftNightEnd) ? log.geofence.shiftNightEnd : (client.shiftNightEnd || "06:00");
+                        const [nsStartH, nsStartM] = actualShiftNs.split(':').map(Number);
+                        const [nsEndH, nsEndM] = actualShiftNe.split(':').map(Number);
+                        const nsStart = nsStartH * 60 + nsStartM;
+                        const nsEnd = nsEndH * 60 + nsEndM;
 
                         while(mStart < mOut) {
                             const time = mStart.getUTCHours() * 60 + mStart.getUTCMinutes();
@@ -441,8 +469,6 @@ app.get('/api/client/hours', authClient, async (req, res) => {
                             mStart.setUTCMinutes(mStart.getUTCMinutes() + 1);
                         }
                     }
-                }
-            }
         });
 
         // Flatten into a report
@@ -531,8 +557,10 @@ app.get('/api/worker/report/:empId', async (req, res) => {
             orderBy: { dateTime: 'asc' }
         });
 
-        const [nStartH, nStartM] = gf.client.shiftNightStart.split(':').map(Number);
-        const [nEndH, nEndM] = gf.client.shiftNightEnd.split(':').map(Number);
+        const actualNightStart = gf.shiftNightStart || gf.client.shiftNightStart;
+        const actualNightEnd = gf.shiftNightEnd || gf.client.shiftNightEnd;
+        const [nStartH, nStartM] = actualNightStart.split(':').map(Number);
+        const [nEndH, nEndM] = actualNightEnd.split(':').map(Number);
 
         let totalHours = 0;
         let nightHours = 0;

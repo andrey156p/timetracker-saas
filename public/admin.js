@@ -21,7 +21,8 @@ const i18n = {
         invoices_title: "Выставленные счета (Invoices)", amount: "Сумма",
         qr_print: "QR / Печать", copy_link: "Копировать линк", reset_pass: "Пароль", tariff: "Тариф",
         per_hour: "За час", per_worker: "За работника", block_btn: "Блок", unblock_btn: "Разблок", copied: "Скопировано!",
-        qr_scan_text: "Отсканируйте этот код камерой вашего телефона для установки приложения учета времени."
+        qr_scan_text: "Отсканируйте этот код камерой вашего телефона для установки приложения учета времени.",
+        edit: "Изменить", indiv_shifts: "Индивидуальные смены (пусто = глобальные)", save_changes: "Сохранить изменения", cancel: "Отмена"
     },
     en: {
         username: "Username", password: "Password", login_btn: "Login", logout: "Logout",
@@ -43,8 +44,10 @@ const i18n = {
         status: "Status", print: "Print", paid: "PAID", pending: "PENDING",
         invoices_title: "Invoices", amount: "Amount",
         qr_print: "QR / Print", copy_link: "Copy Link", reset_pass: "Password", tariff: "Tariff",
+        qr_print: "QR / Print", copy_link: "Copy Link", reset_pass: "Password", tariff: "Tariff",
         per_hour: "Per hour", per_worker: "Per worker", block_btn: "Block", unblock_btn: "Unblock", copied: "Copied!",
-        qr_scan_text: "Scan this code with your phone camera to install the time tracking app."
+        qr_scan_text: "Scan this code with your phone camera to install the time tracking app.",
+        edit: "Edit", indiv_shifts: "Individual Shifts (empty = global)", save_changes: "Save Changes", cancel: "Cancel"
     },
     he: {
         username: "שם משתמש", password: "סיסמה", login_btn: "התחבר", logout: "התנתק",
@@ -74,21 +77,27 @@ const i18n = {
         shift_times: "כניסה/יציאה",
         qr_print: "QR / הדפס", copy_link: "העתק קישור", reset_pass: "סיסמה", tariff: "תעריף",
         per_hour: "לשעה", per_worker: "לעובד", block_btn: "חסום", unblock_btn: "שחרר", copied: "הועתק!",
-        qr_scan_text: "סרוק קוד זה במצלמת הטלפון שלך כדי להתקין את אפליקציית מעקב הזמן."
+        per_hour: "לשעה", per_worker: "לעובד", block_btn: "חסום", unblock_btn: "שחרר", copied: "הועתק!",
+        qr_scan_text: "סרוק קוד זה במצלמת הטלפון שלך כדי להתקין את אפליקציית מעקב הזמן.",
+        edit: "ערוך", indiv_shifts: "משמרות אישיות (ריק = גלובלי)", save_changes: "שמור שינויים", cancel: "ביטול"
     }
 };
 
-let currentLang = localStorage.getItem('lang');
-if (!currentLang) {
-    const browserLang = navigator.language || navigator.userLanguage;
-    if (browserLang.startsWith('ru')) currentLang = 'ru';
-    else if (browserLang.startsWith('he')) currentLang = 'he';
-    else currentLang = 'en';
+let currentLang = 'en';
+const browserLang = (navigator.language || navigator.userLanguage || 'he').toLowerCase();
+if (browserLang.startsWith('ru') || browserLang.startsWith('uk') || browserLang.startsWith('be')) {
+    currentLang = 'ru';
+} else if (browserLang.startsWith('he') || browserLang.startsWith('ar')) {
+    currentLang = 'he';
 }
+
+document.documentElement.dir = (currentLang === 'he' || currentLang === 'ar') ? 'rtl' : 'ltr';
 let userRole = localStorage.getItem('role') || null;
 let authToken = localStorage.getItem('token') || null;
 let clientId = localStorage.getItem('clientId') || null;
 let currentTabId = null;
+let currentWorkersData = [];
+let editingWorkerId = null;
 
 const ownerTabs = [
     { id: 'owner-clients', titleKey: 'tab_owner_clients', url: 'timetracker/owner/clients' },
@@ -103,11 +112,7 @@ const clientTabs = [
 ];
 
 function setLang(lang) {
-    currentLang = lang;
-    localStorage.setItem('lang', lang);
-    document.documentElement.dir = (lang === 'he') ? 'rtl' : 'ltr';
-    translatePage();
-    if (userRole) renderTabs(); // re-render tabs to update titles
+    // Deprecated. Auto-detect is used now.
 }
 
 function formatHM(decimalHours) {
@@ -520,6 +525,7 @@ async function changeOwnerPass() {
 async function renderClientWorkers() {
     const res = await fetch(`${API_URL}/client/employees`, { headers: authHeaders() });
     const r = await res.json();
+    currentWorkersData = r.employees;
     
     let html = `
     <div class="bg-white p-4 rounded shadow mb-6 border">
@@ -535,7 +541,34 @@ async function renderClientWorkers() {
             <div><label class="text-xs text-gray-500" data-i18n="address"></label><input id="w-addr" class="border p-1 rounded w-64 bg-gray-50" readonly></div>
             <div><label class="text-xs text-gray-500" data-i18n="rad"></label><input id="w-rad" class="border p-1 rounded w-20" value="500"></div>
             <div class="flex items-center mb-1"><input type="checkbox" id="w-mob" class="mr-1"><label class="text-xs" data-i18n="mobile"></label></div>
-            <button onclick="saveWorker()" class="bg-blue-600 text-white px-3 py-1 rounded" data-i18n="save"></button>
+            <button onclick="saveWorker()" id="btn-save-worker" class="bg-blue-600 text-white px-3 py-1 rounded" data-i18n="save"></button>
+            <button onclick="cancelEditWorker()" id="btn-cancel-worker" class="hidden bg-gray-400 text-white px-3 py-1 rounded" data-i18n="cancel"></button>
+        </div>
+        <div class="w-full mt-3 pt-3 border-t border-gray-200">
+            <span class="text-xs font-bold text-gray-600 mb-2 block" data-i18n="indiv_shifts"></span>
+            <div class="flex space-x-4">
+                <div>
+                    <label class="text-xs text-gray-500 block" data-i18n="morning"></label>
+                    <div class="flex space-x-1">
+                        <input type="text" placeholder="HH:MM" pattern="([01]?[0-9]|2[0-3]):[0-5][0-9]" id="w-sh-m-s" class="border p-1 rounded w-16 text-center font-mono text-xs">
+                        <input type="text" placeholder="HH:MM" pattern="([01]?[0-9]|2[0-3]):[0-5][0-9]" id="w-sh-m-e" class="border p-1 rounded w-16 text-center font-mono text-xs">
+                    </div>
+                </div>
+                <div>
+                    <label class="text-xs text-gray-500 block" data-i18n="evening"></label>
+                    <div class="flex space-x-1">
+                        <input type="text" placeholder="HH:MM" pattern="([01]?[0-9]|2[0-3]):[0-5][0-9]" id="w-sh-e-s" class="border p-1 rounded w-16 text-center font-mono text-xs">
+                        <input type="text" placeholder="HH:MM" pattern="([01]?[0-9]|2[0-3]):[0-5][0-9]" id="w-sh-e-e" class="border p-1 rounded w-16 text-center font-mono text-xs">
+                    </div>
+                </div>
+                <div>
+                    <label class="text-xs text-gray-500 block" data-i18n="night"></label>
+                    <div class="flex space-x-1">
+                        <input type="text" placeholder="HH:MM" pattern="([01]?[0-9]|2[0-3]):[0-5][0-9]" id="w-sh-n-s" class="border p-1 rounded w-16 text-center font-mono text-xs">
+                        <input type="text" placeholder="HH:MM" pattern="([01]?[0-9]|2[0-3]):[0-5][0-9]" id="w-sh-n-e" class="border p-1 rounded w-16 text-center font-mono text-xs">
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
     
@@ -561,7 +594,10 @@ async function renderClientWorkers() {
                 <button onclick="navigator.clipboard.writeText('${link}'); alert('${i18n[currentLang].copied}')" class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs mb-1">${i18n[currentLang].copy_link}</button>
                 <button onclick="printWorkerQR('${e.empName}', '${link}')" class="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs border">${i18n[currentLang].qr_print}</button>
             </td>
-            <td class="p-2"><button onclick="deleteWorker('${e.empId}')" class="text-red-600 underline text-xs" data-i18n="delete"></button></td>
+            <td class="p-2">
+                <button onclick="editWorker('${e.empId}')" class="text-blue-600 underline text-xs mr-2" data-i18n="edit"></button>
+                <button onclick="deleteWorker('${e.empId}')" class="text-red-600 underline text-xs" data-i18n="delete"></button>
+            </td>
         </tr>`;
     });
     html += `</tbody></table>`;
@@ -623,12 +659,63 @@ async function saveWorker() {
     const radius = document.getElementById('w-rad').value;
     const isMobile = document.getElementById('w-mob').checked;
     
+    const smS = document.getElementById('w-sh-m-s').value;
+    const smE = document.getElementById('w-sh-m-e').value;
+    const seS = document.getElementById('w-sh-e-s').value;
+    const seE = document.getElementById('w-sh-e-e').value;
+    const snS = document.getElementById('w-sh-n-s').value;
+    const snE = document.getElementById('w-sh-n-e').value;
+    
     if(!empId || !empName) return alert("ID and Name required");
-    const res = await fetch(`${API_URL}/client/employees`, {
-        method: 'POST', headers: authHeaders(),
-        body: JSON.stringify({empId, empName, lat, lng, radius, isMobile})
+    
+    let url = `${API_URL}/client/employees`;
+    let method = 'POST';
+    if (editingWorkerId) {
+        url = `${API_URL}/client/employees/${editingWorkerId}`;
+        method = 'PUT';
+    }
+    
+    const res = await fetch(url, {
+        method, headers: authHeaders(),
+        body: JSON.stringify({empId, empName, lat, lng, radius, isMobile, smS, smE, seS, seE, snS, snE})
     });
-    if((await res.json()).success) loadTab('client-workers');
+    const r = await res.json();
+    if(r.success) {
+        editingWorkerId = null;
+        loadTab('client-workers');
+    } else {
+        alert(r.error || "Error saving worker");
+    }
+}
+
+function editWorker(empId) {
+    const w = currentWorkersData.find(e => e.empId === empId);
+    if(!w) return;
+    editingWorkerId = empId;
+    document.getElementById('w-id').value = w.empId;
+    document.getElementById('w-id').disabled = true; // Can't change ID easily
+    document.getElementById('w-name').value = w.empName;
+    document.getElementById('w-lat').value = w.lat;
+    document.getElementById('w-lng').value = w.lng;
+    document.getElementById('w-rad').value = w.radius;
+    document.getElementById('w-mob').checked = w.isMobile;
+    
+    document.getElementById('w-sh-m-s').value = w.shiftMorningStart || "";
+    document.getElementById('w-sh-m-e').value = w.shiftMorningEnd || "";
+    document.getElementById('w-sh-e-s').value = w.shiftEveningStart || "";
+    document.getElementById('w-sh-e-e').value = w.shiftEveningEnd || "";
+    document.getElementById('w-sh-n-s').value = w.shiftNightStart || "";
+    document.getElementById('w-sh-n-e').value = w.shiftNightEnd || "";
+    
+    const btnSave = document.getElementById('btn-save-worker');
+    btnSave.textContent = i18n[currentLang].save_changes || i18n[currentLang].save;
+    document.getElementById('btn-cancel-worker').classList.remove('hidden');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function cancelEditWorker() {
+    editingWorkerId = null;
+    loadTab('client-workers');
 }
 
 async function deleteWorker(empId) {
@@ -668,18 +755,18 @@ async function renderClientShifts() {
         <div class="grid grid-cols-3 gap-4 mb-4">
             <div>
                 <label class="block text-xs font-bold text-gray-600 mb-1" data-i18n="morning"></label>
-                <input type="time" id="sh-m-s" value="${s.shiftMorningStart}" class="border p-1 rounded w-full mb-1">
-                <input type="time" id="sh-m-e" value="${s.shiftMorningEnd}" class="border p-1 rounded w-full">
+                <input type="text" placeholder="HH:MM" pattern="([01]?[0-9]|2[0-3]):[0-5][0-9]" id="sh-m-s" value="${s.shiftMorningStart}" class="border p-1 rounded w-full mb-1 text-center font-mono text-sm">
+                <input type="text" placeholder="HH:MM" pattern="([01]?[0-9]|2[0-3]):[0-5][0-9]" id="sh-m-e" value="${s.shiftMorningEnd}" class="border p-1 rounded w-full text-center font-mono text-sm">
             </div>
             <div>
                 <label class="block text-xs font-bold text-gray-600 mb-1" data-i18n="evening"></label>
-                <input type="time" id="sh-e-s" value="${s.shiftEveningStart}" class="border p-1 rounded w-full mb-1">
-                <input type="time" id="sh-e-e" value="${s.shiftEveningEnd}" class="border p-1 rounded w-full">
+                <input type="text" placeholder="HH:MM" pattern="([01]?[0-9]|2[0-3]):[0-5][0-9]" id="sh-e-s" value="${s.shiftEveningStart}" class="border p-1 rounded w-full mb-1 text-center font-mono text-sm">
+                <input type="text" placeholder="HH:MM" pattern="([01]?[0-9]|2[0-3]):[0-5][0-9]" id="sh-e-e" value="${s.shiftEveningEnd}" class="border p-1 rounded w-full text-center font-mono text-sm">
             </div>
             <div>
                 <label class="block text-xs font-bold text-gray-600 mb-1" data-i18n="night"></label>
-                <input type="time" id="sh-n-s" value="${s.shiftNightStart}" class="border p-1 rounded w-full mb-1">
-                <input type="time" id="sh-n-e" value="${s.shiftNightEnd}" class="border p-1 rounded w-full">
+                <input type="text" placeholder="HH:MM" pattern="([01]?[0-9]|2[0-3]):[0-5][0-9]" id="sh-n-s" value="${s.shiftNightStart}" class="border p-1 rounded w-full mb-1 text-center font-mono text-sm">
+                <input type="text" placeholder="HH:MM" pattern="([01]?[0-9]|2[0-3]):[0-5][0-9]" id="sh-n-e" value="${s.shiftNightEnd}" class="border p-1 rounded w-full text-center font-mono text-sm">
             </div>
         </div>
         <button onclick="saveClientSettings()" class="bg-blue-600 text-white px-4 py-2 rounded" data-i18n="save"></button>
@@ -982,5 +1069,5 @@ function exportClientHoursCSV() {
 
 
 // Auto-init
-setLang(currentLang);
+translatePage();
 if(authToken) initApp();

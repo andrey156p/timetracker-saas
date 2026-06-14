@@ -340,15 +340,16 @@
 
         async function openReports() {
             const month = new Date().toISOString().slice(0, 7);
-            Swal.fire({
-                title: i18n[currentLang].loading,
-                allowOutsideClick: false,
-                didOpen: () => Swal.showLoading()
-            });
+            const btn = document.getElementById('btn-reports');
+            const originalText = btn.textContent;
+            btn.textContent = i18n[currentLang].loading;
+            btn.disabled = true;
 
             try {
                 const res = await fetch(`${API_URL}/worker/report/${empId}?month=${month}`);
                 const r = await res.json();
+                btn.textContent = originalText;
+                btn.disabled = false;
                 if (r.success) {
                     let html = `
                         <div class="text-left text-sm space-y-3 mt-4 text-gray-700" dir="${document.documentElement.dir}">
@@ -375,6 +376,8 @@
                     Swal.fire({ icon: 'error', title: i18n[currentLang].error, text: r.error });
                 }
             } catch(e) {
+                btn.textContent = originalText;
+                btn.disabled = false;
                 Swal.fire({ icon: 'error', title: i18n[currentLang].error, text: i18n[currentLang].err_network });
             }
         }

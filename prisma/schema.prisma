@@ -49,6 +49,13 @@ model Geofence {
   radius    Float?
   isMobile  Boolean    @default(false)
   
+  shiftMorningStart String?
+  shiftMorningEnd   String?
+  shiftEveningStart String?
+  shiftEveningEnd   String?
+  shiftNightStart   String?
+  shiftNightEnd     String?
+
   client    Client     @relation(fields: [clientId], references: [id], onDelete: Cascade)
   
   logs      Log[]

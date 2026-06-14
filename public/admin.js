@@ -565,22 +565,22 @@ async function renderClientWorkers() {
                 <div>
                     <label class="text-xs text-gray-500 block" data-i18n="morning"></label>
                     <div class="flex space-x-1">
-                        <input type="text" placeholder="HH:MM" pattern="([01]?[0-9]|2[0-3]):[0-5][0-9]" id="w-sh-m-s" class="border p-1 rounded w-16 text-center font-mono text-xs">
-                        <input type="text" placeholder="HH:MM" pattern="([01]?[0-9]|2[0-3]):[0-5][0-9]" id="w-sh-m-e" class="border p-1 rounded w-16 text-center font-mono text-xs">
+                        <input type="time" id="w-sh-m-s" class="border p-1 rounded w-20 text-center font-mono text-xs">
+                        <input type="time" id="w-sh-m-e" class="border p-1 rounded w-20 text-center font-mono text-xs">
                     </div>
                 </div>
                 <div>
                     <label class="text-xs text-gray-500 block" data-i18n="evening"></label>
                     <div class="flex space-x-1">
-                        <input type="text" placeholder="HH:MM" pattern="([01]?[0-9]|2[0-3]):[0-5][0-9]" id="w-sh-e-s" class="border p-1 rounded w-16 text-center font-mono text-xs">
-                        <input type="text" placeholder="HH:MM" pattern="([01]?[0-9]|2[0-3]):[0-5][0-9]" id="w-sh-e-e" class="border p-1 rounded w-16 text-center font-mono text-xs">
+                        <input type="time" id="w-sh-e-s" class="border p-1 rounded w-20 text-center font-mono text-xs">
+                        <input type="time" id="w-sh-e-e" class="border p-1 rounded w-20 text-center font-mono text-xs">
                     </div>
                 </div>
                 <div>
                     <label class="text-xs text-gray-500 block" data-i18n="night"></label>
                     <div class="flex space-x-1">
-                        <input type="text" placeholder="HH:MM" pattern="([01]?[0-9]|2[0-3]):[0-5][0-9]" id="w-sh-n-s" class="border p-1 rounded w-16 text-center font-mono text-xs">
-                        <input type="text" placeholder="HH:MM" pattern="([01]?[0-9]|2[0-3]):[0-5][0-9]" id="w-sh-n-e" class="border p-1 rounded w-16 text-center font-mono text-xs">
+                        <input type="time" id="w-sh-n-s" class="border p-1 rounded w-20 text-center font-mono text-xs">
+                        <input type="time" id="w-sh-n-e" class="border p-1 rounded w-20 text-center font-mono text-xs">
                     </div>
                 </div>
             </div>
@@ -600,9 +600,11 @@ async function renderClientWorkers() {
     `;
     r.employees.forEach(e => {
         const link = `${window.location.origin}/app.html?cid=${localStorage.getItem('clientId')}&empId=${e.empId}`;
+        const hasShifts = [e.shiftMorningStart, e.shiftEveningStart, e.shiftNightStart].some(Boolean);
+        const shiftHtml = hasShifts ? `<div class="text-[10px] text-green-600 font-bold bg-green-50 rounded px-1 inline-block mt-1">Особые смены</div>` : '';
         html += `<tr class="border-b hover:bg-gray-50">
             <td class="p-2">${e.empId}</td>
-            <td class="p-2 font-medium">${e.empName}</td>
+            <td class="p-2 font-medium">${e.empName} ${shiftHtml}</td>
             <td class="p-2 text-xs text-gray-500">${e.address ? e.address : e.lat + ', ' + e.lng} <br><span class="text-[10px] text-gray-400">R: ${e.radius}m</span></td>
             <td class="p-2"><input type="checkbox" onchange="toggleMobile('${e.empId}', this.checked)" ${e.isMobile ? 'checked' : ''}></td>
             <td class="p-2">
@@ -773,18 +775,18 @@ async function renderClientShifts() {
         <div class="grid grid-cols-3 gap-4 mb-4">
             <div>
                 <label class="block text-xs font-bold text-gray-600 mb-1" data-i18n="morning"></label>
-                <input type="text" placeholder="HH:MM" pattern="([01]?[0-9]|2[0-3]):[0-5][0-9]" id="sh-m-s" value="${s.shiftMorningStart}" class="border p-1 rounded w-full mb-1 text-center font-mono text-sm">
-                <input type="text" placeholder="HH:MM" pattern="([01]?[0-9]|2[0-3]):[0-5][0-9]" id="sh-m-e" value="${s.shiftMorningEnd}" class="border p-1 rounded w-full text-center font-mono text-sm">
+                <input type="time" id="sh-m-s" value="${s.shiftMorningStart}" class="border p-1 rounded w-full mb-1 text-center font-mono text-sm">
+                <input type="time" id="sh-m-e" value="${s.shiftMorningEnd}" class="border p-1 rounded w-full text-center font-mono text-sm">
             </div>
             <div>
                 <label class="block text-xs font-bold text-gray-600 mb-1" data-i18n="evening"></label>
-                <input type="text" placeholder="HH:MM" pattern="([01]?[0-9]|2[0-3]):[0-5][0-9]" id="sh-e-s" value="${s.shiftEveningStart}" class="border p-1 rounded w-full mb-1 text-center font-mono text-sm">
-                <input type="text" placeholder="HH:MM" pattern="([01]?[0-9]|2[0-3]):[0-5][0-9]" id="sh-e-e" value="${s.shiftEveningEnd}" class="border p-1 rounded w-full text-center font-mono text-sm">
+                <input type="time" id="sh-e-s" value="${s.shiftEveningStart}" class="border p-1 rounded w-full mb-1 text-center font-mono text-sm">
+                <input type="time" id="sh-e-e" value="${s.shiftEveningEnd}" class="border p-1 rounded w-full text-center font-mono text-sm">
             </div>
             <div>
                 <label class="block text-xs font-bold text-gray-600 mb-1" data-i18n="night"></label>
-                <input type="text" placeholder="HH:MM" pattern="([01]?[0-9]|2[0-3]):[0-5][0-9]" id="sh-n-s" value="${s.shiftNightStart}" class="border p-1 rounded w-full mb-1 text-center font-mono text-sm">
-                <input type="text" placeholder="HH:MM" pattern="([01]?[0-9]|2[0-3]):[0-5][0-9]" id="sh-n-e" value="${s.shiftNightEnd}" class="border p-1 rounded w-full text-center font-mono text-sm">
+                <input type="time" id="sh-n-s" value="${s.shiftNightStart}" class="border p-1 rounded w-full mb-1 text-center font-mono text-sm">
+                <input type="time" id="sh-n-e" value="${s.shiftNightEnd}" class="border p-1 rounded w-full text-center font-mono text-sm">
             </div>
         </div>
         <button onclick="saveClientSettings()" class="bg-blue-600 text-white px-4 py-2 rounded" data-i18n="save"></button>

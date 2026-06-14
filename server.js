@@ -642,6 +642,14 @@ app.get('/api/worker/geofence/:empId', async (req, res) => {
             lng: geofence.lng,
             radius: geofence.radius,
             isMobile: geofence.isMobile,
+            shifts: {
+                mS: geofence.shiftMorningStart || geofence.client.shiftMorningStart,
+                mE: geofence.shiftMorningEnd || geofence.client.shiftMorningEnd,
+                eS: geofence.shiftEveningStart || geofence.client.shiftEveningStart,
+                eE: geofence.shiftEveningEnd || geofence.client.shiftEveningEnd,
+                nS: geofence.shiftNightStart || geofence.client.shiftNightStart,
+                nE: geofence.shiftNightEnd || geofence.client.shiftNightEnd
+            },
             lastLog: lastLog ? { action: lastLog.action, time: lastLog.dateTime } : null
         });
     } catch (e) {

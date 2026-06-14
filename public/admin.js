@@ -1,5 +1,21 @@
 const API_URL = '/api';
 
+function showToast(msg, isError=false){
+    if(typeof Swal !== 'undefined'){
+        Swal.fire({
+            toast:true, 
+            position:'top-end', 
+            showConfirmButton:false, 
+            timer:3000, 
+            title:msg, 
+            icon:isError?'error':'info'
+        });
+    } else {
+        alert(msg);
+    }
+}
+
+
 const i18n = {
     ru: {
         username: "Логин", password: "Пароль", login_btn: "Войти", logout: "Выйти",
@@ -279,7 +295,7 @@ async function createForeman() {
         body: JSON.stringify({name, username, password})
     });
     const r = await res.json();
-    if(r.success) loadTab('owner-clients'); else alert(r.error);
+    if(r.success) loadTab('owner-clients'); else showToast(r.error, true);
 }
 
 async function toggleForeman(id) {
@@ -290,7 +306,7 @@ async function toggleForeman(id) {
 async function deleteForeman(id) {
     if (!confirm('Вы уверены, что хотите удалить этого прораба и все его данные (работники, счета, история)? Это действие нельзя отменить! / Are you sure?')) return;
     const res = await fetch(`${API_URL}/admin/clients/${id}`, { method: 'DELETE', headers: authHeaders() });
-    if((await res.json()).success) loadTab('owner-clients'); else alert('Ошибка удаления');
+    if((await res.json()).success) loadTab('owner-clients'); else showToast('Ошибка удаления');
 }
 
 async function resetForemanPass(id) {
@@ -299,7 +315,7 @@ async function resetForemanPass(id) {
     const res = await fetch(`${API_URL}/admin/clients/${id}/reset`, { 
         method: 'POST', headers: authHeaders(), body: JSON.stringify({newPassword}) 
     });
-    if((await res.json()).success) alert("Пароль изменен!");
+    if((await res.json()).success) showToast("Пароль изменен!");
 }
 
 async function openTariffModal(id, mode, pUser, pHour) {
@@ -377,7 +393,7 @@ async function loadBilling() {
     
     const res = await fetch(`${API_URL}/admin/billing?startDate=${start}&endDate=${end}T23:59:59`, { headers: authHeaders() });
     const r = await res.json();
-    if(!r.success) return alert(r.error);
+    if(!r.success) return showToast(r.error, true);
     
     let html = `<table class="w-full text-left border-collapse bg-white shadow rounded">
         <thead><tr class="bg-gray-100 border-b">
@@ -425,7 +441,7 @@ async function createInvoice(clientId, start, end, amount) {
 async function renderOwnerInvoices() {
     const res = await fetch(`${API_URL}/admin/invoices`, { headers: authHeaders() });
     const r = await res.json();
-    if(!r.success) return alert(r.error);
+    if(!r.success) return showToast(r.error, true);
 
     let html = `
     <h2 class="text-xl font-bold mb-4" data-i18n="invoices_title">Выставленные счета (Invoices)</h2>
@@ -507,17 +523,17 @@ function renderOwnerPassword() {
 async function changeOwnerPass() {
     const oldPassword = document.getElementById('owner-old-pass').value;
     const newPassword = document.getElementById('owner-new-pass').value;
-    if(!oldPassword || !newPassword) return alert("Введите пароли");
+    if(!oldPassword || !newPassword) return showToast("Введите пароли");
     const res = await fetch(`${API_URL}/admin/password`, {
         method: 'POST', headers: authHeaders(), body: JSON.stringify({oldPassword, newPassword})
     });
     const r = await res.json();
     if(r.success) { 
-        alert("Пароль успешно изменен!"); 
+        showToast("Пароль успешно изменен!"); 
         document.getElementById('owner-old-pass').value=''; 
         document.getElementById('owner-new-pass').value=''; 
     } else {
-        alert(r.error);
+        showToast(r.error, true);
     }
 }
 
@@ -590,7 +606,7 @@ async function renderClientWorkers() {
             <td class="p-2 text-xs text-gray-500">${e.address ? e.address : e.lat + ', ' + e.lng} <br><span class="text-[10px] text-gray-400">R: ${e.radius}m</span></td>
             <td class="p-2"><input type="checkbox" onchange="toggleMobile('${e.empId}', this.checked)" ${e.isMobile ? 'checked' : ''}></td>
             <td class="p-2">
-                <button onclick="navigator.clipboard.writeText('${link}'); alert('${i18n[currentLang].copied}')" class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs mb-1">${i18n[currentLang].copy_link}</button>
+                <button onclick="navigator.clipboard.writeText('${link}'); showToast('${i18n[currentLang].copied}')" class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs mb-1">${i18n[currentLang].copy_link}</button>
                 <button onclick="printWorkerQR('${e.empName}', '${link}')" class="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs border">${i18n[currentLang].qr_print}</button>
             </td>
             <td class="p-2">
@@ -620,7 +636,7 @@ function printWorkerQR(name, link) {
 }
 
 function getMyLocation() {
-    if (!navigator.geolocation) return alert("Geolocation not supported");
+    if (!navigator.geolocation) return showToast("Geolocation not supported");
     document.getElementById('w-lat').value = '...';
     document.getElementById('w-lng').value = '...';
     navigator.geolocation.getCurrentPosition((pos) => {
@@ -628,7 +644,7 @@ function getMyLocation() {
         document.getElementById('w-lng').value = pos.coords.longitude.toFixed(6);
         fetchAddress();
     }, () => {
-        alert("Failed to get location.");
+        showToast("Failed to get location.");
         document.getElementById('w-lat').value = '';
         document.getElementById('w-lng').value = '';
     }, { enableHighAccuracy: true });
@@ -637,7 +653,7 @@ function getMyLocation() {
 async function fetchAddress() {
     const lat = document.getElementById('w-lat').value;
     const lng = document.getElementById('w-lng').value;
-    if (!lat || !lng) return alert("Введите широту и долготу");
+    if (!lat || !lng) return showToast("Введите широту и долготу");
     try {
         const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
         const data = await res.json();
@@ -667,7 +683,7 @@ async function saveWorker() {
     const snS = document.getElementById('w-sh-n-s').value;
     const snE = document.getElementById('w-sh-n-e').value;
     
-    if(!empId || !empName) return alert("ID and Name required");
+    if(!empId || !empName) return showToast("ID and Name required");
     
     let url = `${API_URL}/client/employees`;
     let method = 'POST';
@@ -685,7 +701,7 @@ async function saveWorker() {
         editingWorkerId = null;
         loadTab('client-workers');
     } else {
-        alert(r.error || "Error saving worker");
+        showToast(r.error || "Error saving worker", true);
     }
 }
 
@@ -903,7 +919,7 @@ async function saveClientSettings() {
     const res = await fetch(`${API_URL}/client/settings`, {
         method: 'POST', headers: authHeaders(), body: JSON.stringify(payload)
     });
-    if((await res.json()).success) alert("Сохранено!");
+    if((await res.json()).success) showToast("Сохранено!");
 }
 
 let lastReportData = [];
@@ -912,13 +928,13 @@ async function loadClientHours() {
     try {
         const startEl = document.getElementById('c-start');
         const endEl = document.getElementById('c-end');
-        if (!startEl || !endEl) return alert('Ошибка UI: поля дат не найдены!');
+        if (!startEl || !endEl) return showToast('Ошибка UI: поля дат не найдены!');
         
         const start = startEl.value;
         const end = endEl.value;
         const resultsEl = document.getElementById('client-hours-results');
         
-        if (!resultsEl) return alert('Ошибка UI: блок результатов не найден!');
+        if (!resultsEl) return showToast('Ошибка UI: блок результатов не найден!');
         
         resultsEl.innerHTML = '<div class="text-blue-500 p-4 font-bold animate-pulse">Загрузка данных с сервера... Пожалуйста, подождите.</div>';
         
@@ -926,14 +942,14 @@ async function loadClientHours() {
         
         if (!res.ok) {
             resultsEl.innerHTML = `<div class="text-red-500 p-4">Ошибка сети: ${res.status}</div>`;
-            return alert(`Ошибка сети: ${res.status}`);
+            return showToast(`Ошибка сети: ${res.status}`);
         }
         
         const r = await res.json();
         
         if (!r.success) {
             resultsEl.innerHTML = `<div class="text-red-500 p-4 font-bold">Ошибка сервера: ${r.error}</div>`;
-            return alert(`Ошибка сервера: ${r.error}`);
+            return showToast(`Ошибка сервера: ${r.error}`);
         }
         
         const empFilter = document.getElementById('c-emp') ? document.getElementById('c-emp').value : 'all';
@@ -1011,7 +1027,7 @@ async function loadClientHours() {
         translatePage();
     } catch(e) {
         document.getElementById('client-hours-results').innerHTML = `<div class="text-red-500 p-4">Критическая ошибка: ${e.message}</div>`;
-        alert(`Критическая ошибка: ${e.message}`);
+        showToast(`Критическая ошибка: ${e.message}`);
     }
 }
 
@@ -1027,7 +1043,7 @@ function clearClientHours() {
 
 function exportClientHoursCSV() {
     try {
-        if(!lastReportData || lastReportData.length === 0) return alert('Нет данных для выгрузки. Сначала загрузите таблицу.');
+        if(!lastReportData || lastReportData.length === 0) return showToast('Нет данных для выгрузки. Сначала загрузите таблицу.');
         
         // Use a bulletproof Excel HTML string to completely bypass all comma/semicolon/locale issues
         const tableHtml = document.getElementById('export-container').outerHTML;
@@ -1065,7 +1081,7 @@ function exportClientHoursCSV() {
         document.body.removeChild(link);
         
     } catch(e) {
-        alert(`Ошибка при выгрузке отчёта: ${e.message}`);
+        showToast(`Ошибка при выгрузке отчёта: ${e.message}`);
     }
 }
 

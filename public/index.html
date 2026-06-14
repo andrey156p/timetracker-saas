@@ -4,7 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TimeTracker SaaS Admin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         .chrome-bg { background-color: #f1f3f4; }
@@ -25,9 +37,55 @@
         body { caret-color: transparent; }
         input, textarea { caret-color: auto; }
         input[type="checkbox"] { cursor: pointer; }
+        
+        /* Modern UI Overrides */
+        button { transition: all 0.2s ease-in-out; }
+        button.bg-blue-600 {
+            background: linear-gradient(135deg, #3b82f6, #2563eb) !important;
+            box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.2), 0 2px 4px -1px rgba(59, 130, 246, 0.1) !important;
+            border: none !important;
+        }
+        button.bg-blue-600:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 8px -1px rgba(59, 130, 246, 0.3), 0 3px 6px -1px rgba(59, 130, 246, 0.2) !important;
+        }
+        table {
+            border-collapse: separate !important;
+            border-spacing: 0 !important;
+            border: 1px solid #e5e7eb !important;
+            border-radius: 0.5rem !important;
+            overflow: hidden !important;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05) !important;
+        }
+        th {
+            background-color: #f8fafc !important;
+            text-transform: uppercase !important;
+            font-size: 0.75rem !important;
+            letter-spacing: 0.05em !important;
+            font-weight: 600 !important;
+            border-bottom: 1px solid #e5e7eb !important;
+            padding: 0.75rem 1rem !important;
+        }
+        td {
+            padding: 0.75rem 1rem !important;
+            border-bottom: 1px solid #f3f4f6 !important;
+        }
+        tr:last-child td { border-bottom: none !important; }
+        input:not([type="checkbox"]), select {
+            border: 1px solid #d1d5db !important;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important;
+            border-radius: 0.5rem !important;
+            transition: all 0.2s !important;
+            padding: 0.5rem 0.75rem !important;
+        }
+        input:not([type="checkbox"]):focus, select:focus {
+            border-color: #3b82f6 !important;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2) !important;
+            outline: none !important;
+        }
     </style>
 </head>
-<body class="chrome-bg h-screen flex flex-col font-sans text-sm p-2 sm:p-4">
+<body class="chrome-bg h-screen flex flex-col font-sans text-sm p-2 sm:p-4 text-gray-800">
 
     <!-- LOGIN SCREEN -->
     <div id="login-screen" class="flex items-center justify-center h-full w-full">

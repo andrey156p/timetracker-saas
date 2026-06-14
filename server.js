@@ -662,6 +662,20 @@ app.get('/api/client/hours', authClient, async (req, res) => {
             }
         });
 
+        // Close open sessions at the end of the logs traversal to show them in the report
+        for (const empId in empSessions) {
+            const s = empSessions[empId];
+            if (s.length > 0 && !s[s.length-1].out) {
+                const inTime = s[s.length-1].in;
+                const shiftDateKey = inTime.toISOString().split('T')[0];
+                const isManualShift = s[s.length-1].inManual;
+                const shiftStr = `${inTime.toLocaleTimeString('ru-RU', {hour: '2-digit', minute:'2-digit', timeZone: 'Asia/Jerusalem'})} - В процессе${isManualShift ? '*' : ''}`;
+                if (empDaily[empId] && empDaily[empId][shiftDateKey]) {
+                    empDaily[empId][shiftDateKey].shifts.push(shiftStr);
+                }
+            }
+        }
+
         // Flatten into a report
         const report = [];
         for (let empId in empDaily) {

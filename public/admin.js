@@ -983,7 +983,10 @@ async function loadClientHours() {
                     <span data-i18n="total_sum_hours">Всего часов за период:</span> 
                     <span class="text-blue-600 bg-blue-100 px-3 py-1 rounded">${formatHM(totalSumDec)}</span>
                 </div>
-                <button onclick="exportClientHoursCSV()" class="bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700 shadow font-bold" data-i18n="download_report">Скачать Отчёт (Excel)</button>
+                <div class="flex space-x-2">
+                    <button onclick="addManualShift()" class="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 shadow font-bold">+ Добавить ручную смену</button>
+                    <button onclick="exportClientHoursCSV()" class="bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700 shadow font-bold" data-i18n="download_report">Скачать Отчёт (Excel)</button>
+                </div>
             </div>
             <div id="export-container" class="space-y-8">`;
             
@@ -1032,6 +1035,7 @@ async function loadClientHours() {
                 html += `</tbody></table></div></div>`;
             }
             html += `</div>`; // end export-container
+            html += `<div class="mt-4 text-xs text-gray-500">* &mdash; смены, добавленные или исправленные руководителем вручную</div>`;
         }
 
         resultsEl.removeAttribute('data-i18n');
@@ -1109,4 +1113,76 @@ window.resetWorkerShifts = function() {
     document.getElementById('w-sh-n-s').value = "";
     document.getElementById('w-sh-n-e').value = "";
     showToast("Смены сброшены. Не забудьте нажать Сохранить", false);
+}
+
+window.addManualShift = async function() {
+    try {
+        const res = await fetch(`${API_URL}/client/employees`, { headers: authHeaders() });
+        const r = await res.json();
+        if (!r.success) return showToast("Ошибка загрузки работников");
+        
+        let options = r.employees.map(e => `<option value="${e.empId}">${e.empName} (ID: ${e.empId})</option>`).join('');
+        
+        const { value: formValues } = await Swal.fire({
+            title: 'Добавить смену вручную',
+            html: `
+                <div class="text-left space-y-4">
+                    <div>
+                        <label class="block text-sm font-bold mb-1">Работник</label>
+                        <select id="m-emp" class="w-full border p-2 rounded">
+                            <option value="" disabled selected>Выберите работника</option>
+                            ${options}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold mb-1">Дата</label>
+                        <input type="date" id="m-date" class="w-full border p-2 rounded" value="${new Date().toISOString().split('T')[0]}">
+                    </div>
+                    <div class="flex space-x-2">
+                        <div class="w-1/2">
+                            <label class="block text-sm font-bold mb-1">Время ВХОДА</label>
+                            <input type="time" id="m-in" class="w-full border p-2 rounded">
+                        </div>
+                        <div class="w-1/2">
+                            <label class="block text-sm font-bold mb-1">Время ВЫХОДА</label>
+                            <input type="time" id="m-out" class="w-full border p-2 rounded">
+                        </div>
+                    </div>
+                </div>
+            `,
+            focusConfirm: false,
+            showCancelButton: true,
+            confirmButtonText: 'Добавить',
+            cancelButtonText: 'Отмена',
+            preConfirm: () => {
+                const empId = document.getElementById('m-emp').value;
+                const date = document.getElementById('m-date').value;
+                const timeIn = document.getElementById('m-in').value;
+                const timeOut = document.getElementById('m-out').value;
+                if (!empId || !date || !timeIn || !timeOut) {
+                    Swal.showValidationMessage('Пожалуйста, заполните все поля');
+                    return false;
+                }
+                return { empId, date, timeIn, timeOut };
+            }
+        });
+
+        if (formValues) {
+            Swal.fire({ title: 'Сохранение...', didOpen: () => Swal.showLoading(), allowOutsideClick: false });
+            const saveRes = await fetch(`${API_URL}/client/logs/manual`, {
+                method: 'POST',
+                headers: authHeaders(),
+                body: JSON.stringify(formValues)
+            });
+            const saveResult = await saveRes.json();
+            if (saveResult.success) {
+                Swal.fire({ icon: 'success', title: 'Успешно', text: 'Смена добавлена', timer: 2000, showConfirmButton: false });
+                loadClientHours(); // Refresh the report automatically
+            } else {
+                Swal.fire({ icon: 'error', title: 'Ошибка', text: saveResult.error });
+            }
+        }
+    } catch(e) {
+        showToast("Ошибка сети");
+    }
 }

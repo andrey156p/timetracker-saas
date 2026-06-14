@@ -492,6 +492,58 @@ app.post('/api/client/settings', authClient, async (req, res) => {
     res.json({ success: true });
 });
 
+app.post('/api/client/logs/manual', authClient, async (req, res) => {
+    try {
+        const { empId, date, timeIn, timeOut } = req.body;
+        if (!empId || !date || !timeIn || !timeOut) return res.status(400).json({ success: false, error: "Missing fields" });
+
+        // Build valid Date objects in local time equivalent
+        const [inH, inM] = timeIn.split(':').map(Number);
+        const [outH, outM] = timeOut.split(':').map(Number);
+
+        // Treat 'date' as a local date string (e.g. "2024-05-10")
+        // We need to parse it carefully to avoid timezone shifting it to the previous day
+        const [yyyy, mm, dd] = date.split('-').map(Number);
+        const inDate = new Date(yyyy, mm - 1, dd, inH, inM, 0);
+        const outDate = new Date(yyyy, mm - 1, dd, outH, outM, 0);
+        
+        // If outDate is before inDate (e.g. night shift), add 1 day to outDate
+        if (outDate < inDate) {
+            outDate.setDate(outDate.getDate() + 1);
+        }
+
+        const geofence = await prisma.geofence.findUnique({ where: { empId } });
+
+        await prisma.$transaction([
+            prisma.log.create({
+                data: {
+                    empId,
+                    clientId: req.user.clientId,
+                    action: "Вход",
+                    dateTime: inDate,
+                    isManual: true,
+                    geofenceId: geofence ? geofence.id : null
+                }
+            }),
+            prisma.log.create({
+                data: {
+                    empId,
+                    clientId: req.user.clientId,
+                    action: "Выход",
+                    dateTime: outDate,
+                    isManual: true,
+                    geofenceId: geofence ? geofence.id : null
+                }
+            })
+        ]);
+
+        res.json({ success: true });
+    } catch(e) {
+        console.error(e);
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
 app.get('/api/client/hours', authClient, async (req, res) => {
     const { startDate, endDate } = req.query;
     try {
@@ -541,7 +593,7 @@ app.get('/api/client/hours', authClient, async (req, res) => {
             
             if (log.action === 'Вход') {
                 if (!empSessions[log.empId]) empSessions[log.empId] = [];
-                empSessions[log.empId].push({ in: log.dateTime, out: null });
+                empSessions[log.empId].push({ in: log.dateTime, out: null, inManual: log.isManual });
             } else if (log.action === 'Выход') {
                 if (empSessions[log.empId] && empSessions[log.empId].length > 0) {
                     const s = empSessions[log.empId];
@@ -560,7 +612,8 @@ app.get('/api/client/hours', authClient, async (req, res) => {
                             };
                         }
                         
-                        const shiftStr = `${inTime.toLocaleTimeString('ru-RU', {hour: '2-digit', minute:'2-digit', timeZone: 'Asia/Jerusalem'})} - ${outTime.toLocaleTimeString('ru-RU', {hour: '2-digit', minute:'2-digit', timeZone: 'Asia/Jerusalem'})}`;
+                        const isManualShift = s[s.length-1].inManual || log.isManual;
+                        const shiftStr = `${inTime.toLocaleTimeString('ru-RU', {hour: '2-digit', minute:'2-digit', timeZone: 'Asia/Jerusalem'})} - ${outTime.toLocaleTimeString('ru-RU', {hour: '2-digit', minute:'2-digit', timeZone: 'Asia/Jerusalem'})}${isManualShift ? '*' : ''}`;
                         empDaily[log.empId][shiftDateKey].shifts.push(shiftStr);
 
                         const diffHours = (outTime - inTime) / 3600000;

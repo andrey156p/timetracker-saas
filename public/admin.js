@@ -773,7 +773,7 @@ async function renderClientShifts() {
     let empOptions = `<option value="all" data-i18n="all_workers">Все работники</option>`;
     if (wData.success && wData.employees) {
         wData.employees.forEach(emp => {
-            empOptions += `<option value="${emp.id}">${emp.empName} (ID: ${emp.empId})</option>`;
+            empOptions += `<option value="${emp.empId}">${emp.empName} (ID: ${emp.empId})</option>`;
         });
     }
 

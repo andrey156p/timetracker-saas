@@ -502,10 +502,19 @@ app.post('/api/client/logs/manual', authClient, async (req, res) => {
         const [outH, outM] = timeOut.split(':').map(Number);
 
         // Treat 'date' as a local date string (e.g. "2024-05-10")
-        // We need to parse it carefully to avoid timezone shifting it to the previous day
-        const [yyyy, mm, dd] = date.split('-').map(Number);
-        const inDate = new Date(yyyy, mm - 1, dd, inH, inM, 0);
-        const outDate = new Date(yyyy, mm - 1, dd, outH, outM, 0);
+        const [yyyy, mm, dd] = date.split('-');
+        
+        // Determine Israel offset for that specific date (+03:00 or +02:00)
+        const dummyDate = new Date(`${yyyy}-${mm}-${dd}T12:00:00Z`);
+        const formatter = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Jerusalem', timeZoneName: 'shortOffset' });
+        const parts = formatter.formatToParts(dummyDate);
+        const offsetPart = parts.find(p => p.type === 'timeZoneName').value;
+        let offset = '+02:00';
+        if (offsetPart.includes('+3')) offset = '+03:00';
+        if (offsetPart.includes('+2')) offset = '+02:00';
+
+        const inDate = new Date(`${yyyy}-${mm}-${dd}T${timeIn}:00${offset}`);
+        const outDate = new Date(`${yyyy}-${mm}-${dd}T${timeOut}:00${offset}`);
         
         // If outDate is before inDate (e.g. night shift), add 1 day to outDate
         if (outDate < inDate) {
@@ -514,8 +523,8 @@ app.post('/api/client/logs/manual', authClient, async (req, res) => {
 
         const geofence = await prisma.geofence.findUnique({ where: { empId } });
 
-        const dateStart = new Date(yyyy, mm - 1, dd, 0, 0, 0);
-        const dateEnd = new Date(yyyy, mm - 1, dd, 23, 59, 59, 999);
+        const dateStart = new Date(`${yyyy}-${mm}-${dd}T00:00:00${offset}`);
+        const dateEnd = new Date(`${yyyy}-${mm}-${dd}T23:59:59.999${offset}`);
 
         await prisma.$transaction([
             prisma.log.deleteMany({
@@ -682,8 +691,8 @@ app.get('/api/client/hours', authClient, async (req, res) => {
             for (let dateKey in empDaily[empId]) {
                 const data = empDaily[empId][dateKey];
                 
-                // Only include days with actual worked hours
-                if (data.totalHours > 0) {
+                // Only include days with actual worked hours OR an open shift
+                if (data.totalHours > 0 || data.shifts.length > 0) {
                     let overtime = 0;
                     if (data.totalHours > 9) {
                         overtime = data.totalHours - 9;

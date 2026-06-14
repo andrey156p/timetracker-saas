@@ -469,6 +469,8 @@ app.get('/api/client/hours', authClient, async (req, res) => {
                             mStart.setUTCMinutes(mStart.getUTCMinutes() + 1);
                         }
                     }
+                }
+            }
         });
 
         // Flatten into a report

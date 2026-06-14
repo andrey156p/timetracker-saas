@@ -10,6 +10,12 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+function getLocalOffsetMs(date) {
+    const tzDate = new Date(date.toLocaleString('en-US', { timeZone: 'Asia/Jerusalem' }));
+    const utcDate = new Date(date.toLocaleString('en-US', { timeZone: 'UTC' }));
+    return tzDate.getTime() - utcDate.getTime();
+}
+
 const JWT_SECRET = 'SUPER_SECRET_TOKEN_V2';
 let OWNER_PASSWORD = 'SuperOwner999';
 
@@ -420,16 +426,20 @@ app.get('/api/client/hours', authClient, async (req, res) => {
                             empDaily[log.empId][shiftDateKey].saturdayHours += diffHours;
                         }
                         
-                        // Night hours overlap (using midpoint heuristic)
-                        const midTime = new Date((inTime.getTime() + outTime.getTime()) / 2);
-                        const midMins = midTime.getHours() * 60 + midTime.getMinutes();
-                        let isNight = false;
-                        if (nsStart > nsEnd) {
-                            if (midMins >= nsStart || midMins <= nsEnd) isNight = true;
-                        } else {
-                            if (midMins >= nsStart && midMins <= nsEnd) isNight = true;
+                        // Night hours overlap (using local timezone)
+                        const offsetMs = getLocalOffsetMs(inTime);
+                        let mStart = new Date(inTime.getTime() + offsetMs);
+                        let mOut = new Date(outTime.getTime() + offsetMs);
+
+                        while(mStart < mOut) {
+                            const time = mStart.getUTCHours() * 60 + mStart.getUTCMinutes();
+                            let isNight = false;
+                            if (nsStart <= nsEnd) isNight = (time >= nsStart && time < nsEnd);
+                            else isNight = (time >= nsStart || time < nsEnd);
+                            
+                            if (isNight) empDaily[log.empId][shiftDateKey].nightHours += 1/60;
+                            mStart.setUTCMinutes(mStart.getUTCMinutes() + 1);
                         }
-                        if (isNight) empDaily[log.empId][shiftDateKey].nightHours += diffHours;
                     }
                 }
             }
@@ -524,19 +534,6 @@ app.get('/api/worker/report/:empId', async (req, res) => {
         const [nStartH, nStartM] = gf.client.shiftNightStart.split(':').map(Number);
         const [nEndH, nEndM] = gf.client.shiftNightEnd.split(':').map(Number);
 
-        function isNightMinute(date) {
-            const h = date.getHours();
-            const m = date.getMinutes();
-            const time = h * 60 + m;
-            const startT = nStartH * 60 + nStartM;
-            const endT = nEndH * 60 + nEndM;
-            if (startT <= endT) {
-                return time >= startT && time < endT;
-            } else {
-                return time >= startT || time < endT; // crosses midnight
-            }
-        }
-
         let totalHours = 0;
         let nightHours = 0;
         let saturdayHours = 0;
@@ -552,17 +549,28 @@ app.get('/api/worker/report/:empId', async (req, res) => {
                 const durationHours = (out - currentIn) / 3600000;
                 totalHours += durationHours;
 
-                // Iterate by minute to calculate night/saturday
-                let mStart = new Date(currentIn);
-                while (mStart < out) {
-                    if (mStart.getDay() === 6) saturdayHours += 1/60;
-                    if (isNightMinute(mStart)) nightHours += 1/60;
+                // Iterate by minute to calculate night/saturday in local time
+                const offsetMs = getLocalOffsetMs(currentIn);
+                let mStart = new Date(currentIn.getTime() + offsetMs);
+                let mOut = new Date(out.getTime() + offsetMs);
+
+                while (mStart < mOut) {
+                    if (mStart.getUTCDay() === 6) saturdayHours += 1/60;
+
+                    const time = mStart.getUTCHours() * 60 + mStart.getUTCMinutes();
+                    const startT = nStartH * 60 + nStartM;
+                    const endT = nEndH * 60 + nEndM;
+                    let isNight = false;
+                    if (startT <= endT) isNight = (time >= startT && time < endT);
+                    else isNight = (time >= startT || time < endT);
+                    
+                    if (isNight) nightHours += 1/60;
                     
                     const dateKey = mStart.toISOString().split('T')[0];
                     if (!dailyHours[dateKey]) dailyHours[dateKey] = 0;
                     dailyHours[dateKey] += 1/60;
 
-                    mStart.setMinutes(mStart.getMinutes() + 1);
+                    mStart.setUTCMinutes(mStart.getUTCMinutes() + 1);
                 }
                 currentIn = null;
             }

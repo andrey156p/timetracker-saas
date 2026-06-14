@@ -63,7 +63,7 @@
         
         <button onclick="openReports()" id="btn-reports" class="shrink-0 w-max mx-auto text-sm text-gray-500 underline text-center pb-2 cursor-pointer transition hover:text-gray-800 select-none" data-i18n="report_btn">Мои Отчёты</button>
 
-        <div id="action-status" class="absolute bottom-4 left-4 right-4 bg-gray-800 text-white p-4 rounded-2xl text-center text-sm font-medium shadow-2xl transform translate-y-24 transition-transform duration-300">
+        <div id="action-status" class="hidden absolute bottom-4 left-4 right-4 bg-gray-800 text-white p-4 rounded-2xl text-center text-sm font-medium shadow-2xl transform translate-y-24 transition-transform duration-300 z-50">
             Сообщение
         </div>
     </div>
@@ -250,6 +250,13 @@
             return `${h}h ${m}m`;
         }
 
+        function formatHM(decimalHours) {
+            if(!decimalHours) return "00:00";
+            const h = Math.floor(decimalHours);
+            const m = Math.round((decimalHours - h) * 60);
+            return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+        }
+
         function showError(msg) {
             document.getElementById('loader').classList.add('hidden');
             document.getElementById('error-screen').classList.remove('hidden');
@@ -262,8 +269,10 @@
             el.textContent = msg;
             el.className = `absolute bottom-4 left-4 right-4 text-white p-4 rounded-2xl text-center text-sm font-medium shadow-2xl transform transition-transform duration-300 z-50 ${isError ? 'bg-red-600' : 'bg-gray-800'}`;
             el.style.transform = 'translateY(0)';
+            el.classList.remove('hidden');
             setTimeout(() => {
                 el.style.transform = 'translateY(150%)';
+                setTimeout(() => el.classList.add('hidden'), 300);
             }, 4000);
         }
 
@@ -343,10 +352,10 @@
                 if (r.success) {
                     let html = `
                         <div class="text-left text-sm space-y-3 mt-4 text-gray-700" dir="${document.documentElement.dir}">
-                            <div class="flex justify-between border-b border-gray-200 pb-2"><span>${i18n[currentLang].report_total}</span> <strong class="text-lg">${r.totalHours}h</strong></div>
-                            <div class="flex justify-between border-b border-gray-200 pb-2"><span>${i18n[currentLang].report_over}</span> <strong class="text-blue-600">${r.overtimeHours}h</strong></div>
-                            <div class="flex justify-between border-b border-gray-200 pb-2"><span>${i18n[currentLang].report_sat}</span> <strong class="text-purple-600">${r.saturdayHours}h</strong></div>
-                            <div class="flex justify-between border-b border-gray-200 pb-2"><span>${i18n[currentLang].report_night}</span> <strong class="text-indigo-600">${r.nightHours}h</strong></div>
+                            <div class="flex justify-between border-b border-gray-200 pb-2"><span>${i18n[currentLang].report_total}</span> <strong class="text-lg">${formatHM(r.totalHours)}</strong></div>
+                            <div class="flex justify-between border-b border-gray-200 pb-2"><span>${i18n[currentLang].report_over}</span> <strong class="text-blue-600">${formatHM(r.overtimeHours)}</strong></div>
+                            <div class="flex justify-between border-b border-gray-200 pb-2"><span>${i18n[currentLang].report_sat}</span> <strong class="text-purple-600">${formatHM(r.saturdayHours)}</strong></div>
+                            <div class="flex justify-between border-b border-gray-200 pb-2"><span>${i18n[currentLang].report_night}</span> <strong class="text-indigo-600">${formatHM(r.nightHours)}</strong></div>
                         </div>
                     `;
                     Swal.fire({
@@ -374,12 +383,12 @@
             let csv = '\uFEFF'; // BOM for Excel
             csv += `Date;Hours\n`;
             for (let d in dailyData) {
-                csv += `${d};${dailyData[d].toFixed(2)}\n`;
+                csv += `${d};${formatHM(dailyData[d])}\n`;
             }
-            csv += `\n${i18n[currentLang].report_total};${totals.totalHours}\n`;
-            csv += `${i18n[currentLang].report_over};${totals.overtimeHours}\n`;
-            csv += `${i18n[currentLang].report_sat};${totals.saturdayHours}\n`;
-            csv += `${i18n[currentLang].report_night};${totals.nightHours}\n`;
+            csv += `\n${i18n[currentLang].report_total};${formatHM(totals.totalHours)}\n`;
+            csv += `${i18n[currentLang].report_over};${formatHM(totals.overtimeHours)}\n`;
+            csv += `${i18n[currentLang].report_sat};${formatHM(totals.saturdayHours)}\n`;
+            csv += `${i18n[currentLang].report_night};${formatHM(totals.nightHours)}\n`;
 
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement("a");

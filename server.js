@@ -146,7 +146,19 @@ app.get('/api/admin/billing', authOwner, async (req, res) => {
 
             let cost = 0;
             if (client.tariffMode === 'per_user') {
-                cost = client.geofences.length * client.pricePerUser;
+                const sDate = new Date(startDate);
+                const eDate = new Date(endDate);
+                let totalWorkerDays = 0;
+                client.geofences.forEach(gf => {
+                    const created = new Date(gf.createdAt);
+                    // Start counting from either the billing period start or worker creation
+                    const actualStart = created > sDate ? created : sDate;
+                    if (actualStart <= eDate) {
+                        const days = Math.ceil((eDate - actualStart) / (1000 * 60 * 60 * 24)) || 1; // At least 1 day if created on eDate
+                        totalWorkerDays += days;
+                    }
+                });
+                cost = totalWorkerDays * client.pricePerUser;
             } else if (client.tariffMode === 'per_hour') {
                 cost = totalHours * client.pricePerHour;
             }
@@ -163,6 +175,104 @@ app.get('/api/admin/billing', authOwner, async (req, res) => {
 
         res.json({ success: true, billingData });
     } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// CRON endpoint to generate monthly invoices automatically
+app.get('/api/cron/billing', async (req, res) => {
+    try {
+        // Simple security check using query param (in production use Authorization header with a secret)
+        const cronSecret = process.env.CRON_SECRET || 'fallback_secret_123';
+        if (req.query.secret !== cronSecret) {
+            return res.status(401).json({ success: false, error: 'Unauthorized cron request' });
+        }
+
+        // Calculate previous month's date range
+        const now = new Date();
+        const startOfPreviousMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const endOfPreviousMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+
+        const clients = await prisma.client.findMany({
+            where: { isActive: true },
+            include: {
+                logs: {
+                    where: {
+                        dateTime: {
+                            gte: startOfPreviousMonth,
+                            lte: endOfPreviousMonth
+                        }
+                    }
+                },
+                geofences: true
+            }
+        });
+
+        let invoicesCreated = 0;
+
+        for (const client of clients) {
+            // Calculate cost
+            let totalHours = 0;
+            const sortedLogs = client.logs.sort((a, b) => a.dateTime - b.dateTime);
+            const employeeSessions = {};
+            
+            sortedLogs.forEach(log => {
+                if (!employeeSessions[log.empId]) employeeSessions[log.empId] = [];
+                if (log.action === 'Вход') {
+                    employeeSessions[log.empId].push({ in: log.dateTime, out: null });
+                } else if (log.action === 'Выход') {
+                    const sessions = employeeSessions[log.empId];
+                    if (sessions && sessions.length > 0 && !sessions[sessions.length-1].out) {
+                        sessions[sessions.length-1].out = log.dateTime;
+                        const diffMs = log.dateTime - sessions[sessions.length-1].in;
+                        totalHours += diffMs / (1000 * 60 * 60);
+                    }
+                }
+            });
+
+            let cost = 0;
+            if (client.tariffMode === 'per_user') {
+                let totalWorkerDays = 0;
+                client.geofences.forEach(gf => {
+                    const created = new Date(gf.createdAt);
+                    const actualStart = created > startOfPreviousMonth ? created : startOfPreviousMonth;
+                    if (actualStart <= endOfPreviousMonth) {
+                        const days = Math.ceil((endOfPreviousMonth - actualStart) / (1000 * 60 * 60 * 24)) || 1;
+                        totalWorkerDays += days;
+                    }
+                });
+                cost = totalWorkerDays * client.pricePerUser;
+            } else if (client.tariffMode === 'per_hour') {
+                cost = totalHours * client.pricePerHour;
+            }
+
+            if (cost > 0) {
+                // Check if invoice already exists for this client and period to avoid duplicates
+                const existingInvoice = await prisma.invoice.findFirst({
+                    where: {
+                        clientId: client.id,
+                        startDate: startOfPreviousMonth,
+                        endDate: endOfPreviousMonth
+                    }
+                });
+
+                if (!existingInvoice) {
+                    await prisma.invoice.create({
+                        data: {
+                            clientId: client.id,
+                            startDate: startOfPreviousMonth,
+                            endDate: endOfPreviousMonth,
+                            amount: parseFloat(cost.toFixed(2)),
+                            status: 'pending'
+                        }
+                    });
+                    invoicesCreated++;
+                }
+            }
+        }
+
+        res.json({ success: true, message: `Generated ${invoicesCreated} invoices for previous month.` });
+    } catch (e) {
+        res.status(500).json({ success: false, error: e.message });
+    }
 });
 
 app.post('/api/admin/clients/:id/tariff', authOwner, async (req, res) => {

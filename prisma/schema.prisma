@@ -55,6 +55,8 @@ model Geofence {
   shiftEveningEnd   String?
   shiftNightStart   String?
   shiftNightEnd     String?
+  
+  createdAt DateTime @default(now())
 
   client    Client     @relation(fields: [clientId], references: [id], onDelete: Cascade)
   

@@ -20,7 +20,7 @@ const i18n = {
         status: "Статус", print: "Печать", paid: "ОПЛАЧЕН", pending: "ОЖИДАЕТ",
         invoices_title: "Выставленные счета (Invoices)", amount: "Сумма",
         qr_print: "QR / Печать", copy_link: "Копировать линк", reset_pass: "Пароль", tariff: "Тариф",
-        per_hour: "За час", per_worker: "За работника", block_btn: "Блок", unblock_btn: "Разблок", copied: "Скопировано!",
+        per_hour: "За час", per_worker: "За работника в день", block_btn: "Блок", unblock_btn: "Разблок", copied: "Скопировано!",
         qr_scan_text: "Отсканируйте этот код камерой вашего телефона для установки приложения учета времени.",
         edit: "Изменить", indiv_shifts: "Индивидуальные смены (пусто = глобальные)", save_changes: "Сохранить изменения", cancel: "Отмена"
     },
@@ -45,7 +45,7 @@ const i18n = {
         invoices_title: "Invoices", amount: "Amount",
         qr_print: "QR / Print", copy_link: "Copy Link", reset_pass: "Password", tariff: "Tariff",
         qr_print: "QR / Print", copy_link: "Copy Link", reset_pass: "Password", tariff: "Tariff",
-        per_hour: "Per hour", per_worker: "Per worker", block_btn: "Block", unblock_btn: "Unblock", copied: "Copied!",
+        per_hour: "Per hour", per_worker: "Per worker (daily)", block_btn: "Block", unblock_btn: "Unblock", copied: "Copied!",
         qr_scan_text: "Scan this code with your phone camera to install the time tracking app.",
         edit: "Edit", indiv_shifts: "Individual Shifts (empty = global)", save_changes: "Save Changes", cancel: "Cancel"
     },
@@ -76,8 +76,7 @@ const i18n = {
         download_report: "הורד דוח (Excel)",
         shift_times: "כניסה/יציאה",
         qr_print: "QR / הדפס", copy_link: "העתק קישור", reset_pass: "סיסמה", tariff: "תעריף",
-        per_hour: "לשעה", per_worker: "לעובד", block_btn: "חסום", unblock_btn: "שחרר", copied: "הועתק!",
-        per_hour: "לשעה", per_worker: "לעובד", block_btn: "חסום", unblock_btn: "שחרר", copied: "הועתק!",
+        per_hour: "לשעה", per_worker: "לעובד ליום", block_btn: "חסום", unblock_btn: "שחרר", copied: "הועתק!",
         qr_scan_text: "סרוק קוד זה במצלמת הטלפון שלך כדי להתקין את אפליקציית מעקב הזמן.",
         edit: "ערוך", indiv_shifts: "משמרות אישיות (ריק = גלובלי)", save_changes: "שמור שינויים", cancel: "ביטול"
     }

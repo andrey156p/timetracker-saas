@@ -560,7 +560,10 @@ async function renderClientWorkers() {
             <button onclick="cancelEditWorker()" id="btn-cancel-worker" class="hidden bg-gray-400 text-white px-3 py-1 rounded" data-i18n="cancel"></button>
         </div>
         <div class="w-full mt-3 pt-3 border-t border-gray-200">
-            <span class="text-xs font-bold text-gray-600 mb-2 block" data-i18n="indiv_shifts"></span>
+            <div class="flex items-center mb-2">
+                <span class="text-xs font-bold text-gray-600 mr-4" data-i18n="indiv_shifts"></span>
+                <button onclick="resetWorkerShifts()" class="text-[10px] bg-red-50 text-red-600 px-2 py-1 rounded border border-red-200 hover:bg-red-100 transition">Сбросить на глобальные</button>
+            </div>
             <div class="flex space-x-4">
                 <div>
                     <label class="text-xs text-gray-500 block" data-i18n="morning"></label>
@@ -600,8 +603,15 @@ async function renderClientWorkers() {
     `;
     r.employees.forEach(e => {
         const link = `${window.location.origin}/app.html?cid=${localStorage.getItem('clientId')}&empId=${e.empId}`;
-        const hasShifts = [e.shiftMorningStart, e.shiftEveningStart, e.shiftNightStart].some(Boolean);
-        const shiftHtml = hasShifts ? `<div class="text-[10px] text-green-600 font-bold bg-green-50 rounded px-1 inline-block mt-1">Особые смены</div>` : '';
+        const smS = e.shiftMorningStart, smE = e.shiftMorningEnd;
+        const seS = e.shiftEveningStart, seE = e.shiftEveningEnd;
+        const snS = e.shiftNightStart, snE = e.shiftNightEnd;
+        const hasShifts = [smS, seS, snS].some(Boolean);
+        let shiftStr = '';
+        if (smS) shiftStr += `У:${smS}-${smE} `;
+        if (seS) shiftStr += `В:${seS}-${seE} `;
+        if (snS) shiftStr += `Н:${snS}-${snE} `;
+        const shiftHtml = hasShifts ? `<div class="text-[10px] text-green-700 font-bold bg-green-100 border border-green-200 rounded px-1.5 py-0.5 inline-block mt-1">Особые смены: ${shiftStr.trim()}</div>` : '';
         html += `<tr class="border-b hover:bg-gray-50">
             <td class="p-2">${e.empId}</td>
             <td class="p-2 font-medium">${e.empName} ${shiftHtml}</td>
@@ -1091,3 +1101,12 @@ function exportClientHoursCSV() {
 // Auto-init
 translatePage();
 if(authToken) initApp();
+window.resetWorkerShifts = function() {
+    document.getElementById('w-sh-m-s').value = "";
+    document.getElementById('w-sh-m-e').value = "";
+    document.getElementById('w-sh-e-s').value = "";
+    document.getElementById('w-sh-e-e').value = "";
+    document.getElementById('w-sh-n-s').value = "";
+    document.getElementById('w-sh-n-e').value = "";
+    showToast("Смены сброшены. Не забудьте нажать Сохранить", false);
+}

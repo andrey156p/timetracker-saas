@@ -47,6 +47,7 @@ model Geofence {
   lat       Float?
   lng       Float?
   radius    Float?
+  address   String?
   isMobile  Boolean    @default(false)
   
   shiftMorningStart String?

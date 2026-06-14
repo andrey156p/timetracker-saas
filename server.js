@@ -357,12 +357,12 @@ app.get('/api/client/employees', authClient, async (req, res) => {
 });
 
 app.post('/api/client/employees', authClient, async (req, res) => {
-    const { empId, empName, lat, lng, radius, isMobile, smS, smE, seS, seE, snS, snE } = req.body;
+    const { empId, empName, lat, lng, radius, isMobile, address, smS, smE, seS, seE, snS, snE } = req.body;
     try {
         await prisma.geofence.create({
             data: {
                 clientId: req.user.clientId,
-                empId, empName, lat: parseFloat(lat)||0, lng: parseFloat(lng)||0, radius: parseFloat(radius)||0, isMobile: !!isMobile,
+                empId, empName, lat: parseFloat(lat)||0, lng: parseFloat(lng)||0, radius: parseFloat(radius)||0, isMobile: !!isMobile, address: address || null,
                 shiftMorningStart: smS || null, shiftMorningEnd: smE || null,
                 shiftEveningStart: seS || null, shiftEveningEnd: seE || null,
                 shiftNightStart: snS || null, shiftNightEnd: snE || null
@@ -375,12 +375,12 @@ app.post('/api/client/employees', authClient, async (req, res) => {
 });
 
 app.put('/api/client/employees/:empId', authClient, async (req, res) => {
-    const { empName, lat, lng, radius, isMobile, smS, smE, seS, seE, snS, snE } = req.body;
+    const { empName, lat, lng, radius, isMobile, address, smS, smE, seS, seE, snS, snE } = req.body;
     try {
         await prisma.geofence.update({
             where: { empId: req.params.empId },
             data: {
-                empName, lat: parseFloat(lat)||0, lng: parseFloat(lng)||0, radius: parseFloat(radius)||0, isMobile: !!isMobile,
+                empName, lat: parseFloat(lat)||0, lng: parseFloat(lng)||0, radius: parseFloat(radius)||0, isMobile: !!isMobile, address: address || null,
                 shiftMorningStart: smS || null, shiftMorningEnd: smE || null,
                 shiftEveningStart: seS || null, shiftEveningEnd: seE || null,
                 shiftNightStart: snS || null, shiftNightEnd: snE || null

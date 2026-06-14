@@ -532,8 +532,8 @@ async function renderClientWorkers() {
         <div class="flex flex-wrap gap-2 items-end">
             <div><label class="text-xs text-gray-500">ID (phone)</label><input id="w-id" class="border p-1 rounded w-24"></div>
             <div><label class="text-xs text-gray-500" data-i18n="worker_name"></label><input id="w-name" class="border p-1 rounded"></div>
-            <div><label class="text-xs text-gray-500" data-i18n="lat"></label><input id="w-lat" class="border p-1 rounded w-24"></div>
-            <div><label class="text-xs text-gray-500" data-i18n="lng"></label><input id="w-lng" class="border p-1 rounded w-24"></div>
+            <div><label class="text-xs text-gray-500" data-i18n="lat"></label><input id="w-lat" class="border p-1 rounded w-24" onchange="fetchAddress()"></div>
+            <div><label class="text-xs text-gray-500" data-i18n="lng"></label><input id="w-lng" class="border p-1 rounded w-24" onchange="fetchAddress()"></div>
             <button onclick="getMyLocation()" class="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded border border-blue-300" data-i18n="get_my_loc"></button>
             <button onclick="fetchAddress()" class="bg-gray-200 text-xs px-2 py-1 rounded" data-i18n="geocode"></button>
             <div class="w-full"></div>
@@ -587,7 +587,7 @@ async function renderClientWorkers() {
         html += `<tr class="border-b hover:bg-gray-50">
             <td class="p-2">${e.empId}</td>
             <td class="p-2 font-medium">${e.empName}</td>
-            <td class="p-2 text-xs text-gray-500">${e.lat}, ${e.lng} (R:${e.radius}m)</td>
+            <td class="p-2 text-xs text-gray-500">${e.address ? e.address : e.lat + ', ' + e.lng} <br><span class="text-[10px] text-gray-400">R: ${e.radius}m</span></td>
             <td class="p-2"><input type="checkbox" onchange="toggleMobile('${e.empId}', this.checked)" ${e.isMobile ? 'checked' : ''}></td>
             <td class="p-2">
                 <button onclick="navigator.clipboard.writeText('${link}'); alert('${i18n[currentLang].copied}')" class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs mb-1">${i18n[currentLang].copy_link}</button>
@@ -626,6 +626,7 @@ function getMyLocation() {
     navigator.geolocation.getCurrentPosition((pos) => {
         document.getElementById('w-lat').value = pos.coords.latitude.toFixed(6);
         document.getElementById('w-lng').value = pos.coords.longitude.toFixed(6);
+        fetchAddress();
     }, () => {
         alert("Failed to get location.");
         document.getElementById('w-lat').value = '';
@@ -657,6 +658,7 @@ async function saveWorker() {
     const lng = document.getElementById('w-lng').value;
     const radius = document.getElementById('w-rad').value;
     const isMobile = document.getElementById('w-mob').checked;
+    const address = document.getElementById('w-addr').value;
     
     const smS = document.getElementById('w-sh-m-s').value;
     const smE = document.getElementById('w-sh-m-e').value;
@@ -676,7 +678,7 @@ async function saveWorker() {
     
     const res = await fetch(url, {
         method, headers: authHeaders(),
-        body: JSON.stringify({empId, empName, lat, lng, radius, isMobile, smS, smE, seS, seE, snS, snE})
+        body: JSON.stringify({empId, empName, lat, lng, radius, isMobile, address, smS, smE, seS, seE, snS, snE})
     });
     const r = await res.json();
     if(r.success) {
@@ -698,6 +700,7 @@ function editWorker(empId) {
     document.getElementById('w-lng').value = w.lng;
     document.getElementById('w-rad').value = w.radius;
     document.getElementById('w-mob').checked = w.isMobile;
+    document.getElementById('w-addr').value = w.address || "";
     
     document.getElementById('w-sh-m-s').value = w.shiftMorningStart || "";
     document.getElementById('w-sh-m-e').value = w.shiftMorningEnd || "";

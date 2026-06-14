@@ -17,7 +17,12 @@ function getLocalOffsetMs(date) {
 }
 
 const JWT_SECRET = 'SUPER_SECRET_TOKEN_V2';
-let OWNER_PASSWORD = 'SuperOwner999';
+
+async function getOwnerPassword() {
+    let settings = await prisma.saaSSettings.findFirst();
+    if (!settings) settings = await prisma.saaSSettings.create({ data: {} });
+    return settings.ownerPassword;
+}
 
 // Static files
 app.use(express.static(path.join(__dirname, 'public')));
@@ -52,6 +57,7 @@ app.post('/api/auth/login', async (req, res) => {
     const { username, password } = req.body;
     
     // Check Owner
+    const OWNER_PASSWORD = await getOwnerPassword();
     if (username === 'owner' && password === OWNER_PASSWORD) {
         const token = jwt.sign({ role: 'owner' }, JWT_SECRET, { expiresIn: '7d' });
         return res.json({ success: true, role: 'owner', token });
@@ -73,9 +79,16 @@ app.post('/api/auth/login', async (req, res) => {
 // ==========================================
 app.post('/api/admin/password', authOwner, async (req, res) => {
     const { oldPassword, newPassword } = req.body;
-    if (oldPassword !== OWNER_PASSWORD) return res.status(403).json({ success: false, error: 'Неверный старый пароль' });
-    if (!newPassword) return res.status(400).json({ success: false, error: 'Пароль пуст' });
-    OWNER_PASSWORD = newPassword;
+    const currentPassword = await getOwnerPassword();
+    if (oldPassword !== currentPassword) return res.status(403).json({ success: false, error: 'Неверный старый пароль' });
+    if (!newPassword) return res.status(400).json({ success: false, error: 'Пустой новый пароль' });
+    
+    let settings = await prisma.saaSSettings.findFirst();
+    await prisma.saaSSettings.update({
+        where: { id: settings.id },
+        data: { ownerPassword: newPassword }
+    });
+    
     res.json({ success: true });
 });
 

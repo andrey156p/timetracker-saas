@@ -12,6 +12,7 @@ model SaaSSettings {
   tariffMode   String  @default("per_user") // "per_user" or "per_hour"
   pricePerUser Float   @default(100.0)
   pricePerHour Float   @default(1.5)
+  ownerPassword String @default("admin123")
 }
 
 model Client {

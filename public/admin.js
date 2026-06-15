@@ -586,7 +586,6 @@ async function renderClientWorkers() {
                 });
             }
         } catch(e) {}
-    } catch(e) {}
     }
     
     let html = '';

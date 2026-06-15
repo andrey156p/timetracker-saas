@@ -573,9 +573,73 @@ async function renderClientWorkers() {
                 });
             }
         } catch(e) {}
+    } catch(e) {}
     }
     
-    let html = `
+    let html = '';
+    
+    if (userRole === 'foreman') {
+        const onlineCount = currentWorkersData.filter(e => e.isOnline).length;
+        const totalCount = currentWorkersData.length;
+        const offlineCount = totalCount - onlineCount;
+
+        let recentLogsHtml = '<div class="text-xs text-gray-500">Нет событий</div>';
+        try {
+            const logsRes = await fetch(`${API_URL}/client/logs/recent`, { headers: authHeaders() });
+            const logsData = await logsRes.json();
+            if(logsData.success && logsData.logs && logsData.logs.length > 0) {
+                recentLogsHtml = logsData.logs.map(l => {
+                    const timeStr = new Date(l.dateTime).toLocaleTimeString('ru-RU', {hour: '2-digit', minute:'2-digit'});
+                    const isEnter = l.action === 'Вход';
+                    const icon = isEnter ? '🟢' : '🔴';
+                    const empName = l.geofence ? l.geofence.empName : l.empId;
+                    return `<div class="mb-2 text-sm border-b pb-2 last:border-0">${icon} <span class="font-bold">${timeStr}</span> — ${empName} <span class="text-gray-500">(${l.action})</span> ${l.isManual ? ' <span class="text-[10px] bg-yellow-100 text-yellow-700 px-1 rounded border border-yellow-200">Вручную</span>' : ''}</div>`;
+                }).join('');
+            }
+        } catch(e) {}
+
+        let workersOptions = currentWorkersData.map(e => `<option value="${e.empId}">${e.empName} (${e.empId})</option>`).join('');
+
+        html += `
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="bg-white p-6 rounded shadow border border-t-4 border-t-blue-500">
+                <h3 class="font-bold mb-4 text-gray-700 text-lg">Сводка дня</h3>
+                <div class="flex justify-between items-center bg-gray-50 p-4 rounded mb-3 border border-gray-100">
+                    <span class="text-sm font-medium text-gray-600">Всего в бригаде:</span>
+                    <span class="text-xl font-bold text-gray-800">${totalCount}</span>
+                </div>
+                <div class="flex justify-between items-center bg-green-50 p-4 rounded mb-3 border border-green-200">
+                    <span class="text-sm font-medium text-green-800">Сейчас на смене:</span>
+                    <span class="text-xl font-bold text-green-700">${onlineCount}</span>
+                </div>
+                <div class="flex justify-between items-center bg-red-50 p-4 rounded border border-red-200">
+                    <span class="text-sm font-medium text-red-800">Отсутствуют:</span>
+                    <span class="text-xl font-bold text-red-700">${offlineCount}</span>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded shadow border border-t-4 border-t-purple-500 flex flex-col">
+                <h3 class="font-bold mb-2 text-gray-700 text-lg">Ручной контроль смен</h3>
+                <p class="text-xs text-gray-500 mb-4">Если у работника нет интернета, вы можете отметить его вручную.</p>
+                <select id="fm-manual-worker" class="border p-2.5 rounded w-full mb-6 text-sm bg-gray-50 font-medium">
+                    ${workersOptions}
+                </select>
+                <div class="flex space-x-4 mt-auto">
+                    <button onclick="quickLog('Вход')" class="w-1/2 bg-green-600 hover:bg-green-700 text-white py-3 rounded font-bold shadow text-sm transition">Отметить ВХОД</button>
+                    <button onclick="quickLog('Выход')" class="w-1/2 bg-red-600 hover:bg-red-700 text-white py-3 rounded font-bold shadow text-sm transition">Отметить УХОД</button>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded shadow border border-t-4 border-t-yellow-500 md:col-span-2">
+                <h3 class="font-bold mb-4 text-gray-700 text-lg">Живая лента событий</h3>
+                <div class="max-h-60 overflow-y-auto pr-2">
+                    ${recentLogsHtml}
+                </div>
+            </div>
+        </div>
+        `;
+    } else {
+        html += `
     <div class="bg-white p-4 rounded shadow mb-6 border">
         <h3 class="font-bold mb-2" data-i18n="add_worker"></h3>
         <div class="flex flex-wrap gap-2 items-end">
@@ -621,9 +685,13 @@ async function renderClientWorkers() {
                     </div>
                 </div>
             </div>
+            </div>
         </div>
     </div>
+    `;
+    } // end else userRole !== 'foreman'
     
+    html += `
     <h3 class="font-bold mb-2" data-i18n="tab_client_workers"></h3>
     <table class="w-full text-left border-collapse bg-white shadow rounded">
         <thead><tr class="bg-gray-100 border-b">
@@ -798,10 +866,30 @@ function editWorker(empId) {
     document.getElementById('w-sh-n-s').value = w.shiftNightStart || "";
     document.getElementById('w-sh-n-e').value = w.shiftNightEnd || "";
     
-    const btnSave = document.getElementById('btn-save-worker');
-    btnSave.textContent = i18n[currentLang].save_changes || i18n[currentLang].save;
+    document.getElementById('btn-save-worker').innerText = i18n[currentLang].save;
     document.getElementById('btn-cancel-worker').classList.remove('hidden');
     window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+async function quickLog(action) {
+    const empId = document.getElementById('fm-manual-worker').value;
+    if (!empId) return showToast('Выберите работника', true);
+    try {
+        const res = await fetch(`${API_URL}/client/logs/quick`, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify({ empId, action })
+        });
+        const r = await res.json();
+        if (r.success) {
+            showToast(`Успешно: ${action}`);
+            renderClientWorkers();
+        } else {
+            showToast(r.error || 'Ошибка', true);
+        }
+    } catch(e) {
+        showToast('Ошибка сети', true);
+    }
 }
 
 function cancelEditWorker() {

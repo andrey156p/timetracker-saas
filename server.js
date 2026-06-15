@@ -603,6 +603,48 @@ app.post('/api/client/settings', authClient, requireClientRole, async (req, res)
     res.json({ success: true });
 });
 
+app.get('/api/client/logs/recent', authClient, async (req, res) => {
+    try {
+        let where = { clientId: req.user.clientId };
+        if (req.user.role === 'foreman') {
+            const geofences = await prisma.geofence.findMany({ where: { clientId: req.user.clientId, foremanId: req.user.foremanId }});
+            where.empId = { in: geofences.map(g => g.empId) };
+        }
+        const logs = await prisma.log.findMany({
+            where,
+            orderBy: { dateTime: 'desc' },
+            take: 20,
+            include: { geofence: true }
+        });
+        res.json({ success: true, logs });
+    } catch(e) {
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
+app.post('/api/client/logs/quick', authClient, async (req, res) => {
+    try {
+        const { empId, action } = req.body;
+        let where = { clientId: req.user.clientId, empId };
+        if (req.user.role === 'foreman') where.foremanId = req.user.foremanId;
+        const gf = await prisma.geofence.findFirst({ where });
+        if (!gf) return res.status(403).json({ success: false, error: "Access denied" });
+        
+        await prisma.log.create({
+            data: {
+                empId, action,
+                clientId: req.user.clientId,
+                geofenceId: gf.id,
+                isManual: true,
+                lat: 0, lng: 0
+            }
+        });
+        res.json({ success: true });
+    } catch(e) {
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
 app.post('/api/client/logs/manual', authClient, async (req, res) => {
     try {
         const { empId, date, timeIn, timeOut } = req.body;

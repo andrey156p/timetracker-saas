@@ -546,21 +546,27 @@
         }
 
         function downloadReportCSV(dailyData, month, totals) {
-            let csv = '\uFEFF'; // BOM for Excel
-            csv += `Date;Hours\n`;
+            let html = `
+            <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+            <head><meta charset="utf-8" /></head>
+            <body>
+                <table border="1">
+                    <tr><th>Date</th><th>Hours</th></tr>`;
             for (let d in dailyData) {
-                csv += `${d};${formatHM(dailyData[d])}\n`;
+                html += `<tr><td>${d}</td><td>${formatHM(dailyData[d])}</td></tr>`;
             }
-            csv += `\n${i18n[currentLang].report_total};${formatHM(totals.totalHours)}\n`;
-            csv += `${i18n[currentLang].report_over};${formatHM(totals.overtimeHours)}\n`;
-            csv += `${i18n[currentLang].report_sat};${formatHM(totals.saturdayHours)}\n`;
-            csv += `${i18n[currentLang].report_night};${formatHM(totals.nightHours)}\n`;
+            html += `<tr><td></td><td></td></tr>`;
+            html += `<tr><td><b>${i18n[currentLang].report_total}</b></td><td>${formatHM(totals.totalHours)}</td></tr>`;
+            html += `<tr><td><b>${i18n[currentLang].report_over}</b></td><td>${formatHM(totals.overtimeHours)}</td></tr>`;
+            html += `<tr><td><b>${i18n[currentLang].report_sat}</b></td><td>${formatHM(totals.saturdayHours)}</td></tr>`;
+            html += `<tr><td><b>${i18n[currentLang].report_night}</b></td><td>${formatHM(totals.nightHours)}</td></tr>`;
+            html += `</table></body></html>`;
 
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const blob = new Blob([html], { type: 'application/vnd.ms-excel' });
             const link = document.createElement("a");
             const url = URL.createObjectURL(blob);
             link.setAttribute("href", url);
-            link.setAttribute("download", `Report_${empId}_${month}.csv`);
+            link.setAttribute("download", `Report_${empId}_${month}.xls`);
             link.style.visibility = 'hidden';
             document.body.appendChild(link);
             link.click();

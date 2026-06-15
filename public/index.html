@@ -20,20 +20,45 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        .chrome-bg { background-color: #f1f3f4; }
-        .chrome-tab-bar { background-color: #dee1e6; }
+        .chrome-bg { background-color: #f8fafc; }
+        .chrome-tab-bar { background-color: #e2e8f0; padding: 10px 10px 0 10px; display: flex; gap: 4px; border-bottom: 1px solid #cbd5e1; }
         .chrome-tab { 
-            border-top-left-radius: 8px; 
-            border-top-right-radius: 8px;
+            border-top-left-radius: 10px; 
+            border-top-right-radius: 10px;
             cursor: pointer;
             position: relative;
-            margin-right: 2px;
-            transition: background-color 0.2s;
+            padding: 10px 24px;
+            transition: all 0.2s ease;
+            font-weight: 500;
+            color: #64748b;
         }
-        .chrome-tab.active { background-color: #ffffff; z-index: 10; font-weight: 500; }
-        .chrome-tab.inactive { background-color: #dee1e6; }
-        .chrome-tab.inactive:hover { background-color: #e8eaed; }
-        .chrome-viewport { background-color: #ffffff; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; }
+        .chrome-tab.active { 
+            background-color: #ffffff; 
+            z-index: 10; 
+            color: #3b82f6;
+            box-shadow: 0 -4px 10px rgba(0,0,0,0.03);
+            border: 1px solid #cbd5e1;
+            border-bottom: none;
+            margin-bottom: -1px;
+        }
+        .chrome-tab.active::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 3px;
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+            border-top-left-radius: 10px;
+            border-top-right-radius: 10px;
+        }
+        .chrome-tab.inactive { background-color: transparent; border: 1px solid transparent; }
+        .chrome-tab.inactive:hover { background-color: #cbd5e1; color: #334155; }
+        .chrome-viewport { 
+            background-color: #ffffff; 
+            border-bottom-left-radius: 12px; 
+            border-bottom-right-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+            border: 1px solid #cbd5e1;
+            border-top: none;
+        }
         button, a, select { user-select: none; -webkit-user-select: none; cursor: pointer; caret-color: transparent; }
         body { caret-color: transparent; }
         input, textarea { caret-color: auto; }
@@ -53,10 +78,16 @@
         table {
             border-collapse: separate !important;
             border-spacing: 0 !important;
-            border: 1px solid #e5e7eb !important;
+            border: 1px solid #e2e8f0 !important;
             border-radius: 0.5rem !important;
             overflow: hidden !important;
-            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05) !important;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.02) !important;
+        }
+        table tr {
+            vertical-align: top !important;
+        }
+        table td {
+            padding: 12px 16px !important;
         }
         th {
             background-color: #f8fafc !important;
@@ -161,6 +192,6 @@
             <div id="view-content" class="max-w-6xl mx-auto"></div>
         </div>
     </div>
-    <script src="admin.js?v=3"></script>
+    <script src="admin.js?v=4"></script>
 </body>
 </html>

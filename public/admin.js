@@ -665,6 +665,7 @@ async function renderClientWorkers() {
             <div><label class="text-xs text-gray-500" data-i18n="address"></label><input id="w-addr" class="border p-1 rounded w-64 bg-gray-50" readonly></div>
             <div><label class="text-xs text-gray-500" data-i18n="rad"></label><input id="w-rad" class="border p-1 rounded w-20" value="500"></div>
             <div class="flex items-center mb-1"><input type="checkbox" id="w-mob" class="mr-1"><label class="text-xs" data-i18n="mobile"></label></div>
+            <div class="flex items-center mb-1 ml-4"><input type="checkbox" id="w-strict-gps" class="mr-1"><label class="text-xs text-red-600 font-bold">Строгий GPS</label></div>
             ${userRole === 'client' ? `<div><label class="text-xs text-gray-500 block">Бригадир</label><select id="w-foreman" class="border p-1.5 rounded bg-white text-sm" style="min-width: 160px;">${foremenOptions}</select></div>` : ''}
             <button onclick="saveWorker()" id="btn-save-worker" class="bg-blue-600 text-white px-3 py-1 rounded" data-i18n="save"></button>
             <button onclick="cancelEditWorker()" id="btn-cancel-worker" class="hidden bg-gray-400 text-white px-3 py-1 rounded" data-i18n="cancel"></button>
@@ -766,6 +767,7 @@ async function renderClientWorkers() {
                 <button onclick="printWorkerQR('${e.empName}', '${link}')" class="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs border">${i18n[currentLang].qr_print}</button>
             </td>
             <td class="p-2">
+                <button onclick="openNotesModal('${e.empId}')" class="text-purple-600 underline text-xs mr-2 font-bold">Примечания</button><br>
                 <button onclick="editWorker('${e.empId}')" class="text-blue-600 underline text-xs mr-2" data-i18n="edit"></button>
                 <button onclick="deleteWorker('${e.empId}')" class="text-red-600 underline text-xs" data-i18n="delete"></button>
             </td>
@@ -845,6 +847,7 @@ async function saveWorker() {
     const lng = document.getElementById('w-lng').value;
     const radius = document.getElementById('w-rad').value;
     const isMobile = document.getElementById('w-mob').checked;
+    const strictGps = document.getElementById('w-strict-gps').checked;
     const fSel = document.getElementById('w-foreman');
     const foremanId = fSel ? fSel.value : null;
     const address = document.getElementById('w-addr').value;
@@ -867,7 +870,7 @@ async function saveWorker() {
     
     const res = await fetch(url, {
         method, headers: authHeaders(),
-        body: JSON.stringify({empId, empName, lat, lng, radius, isMobile, foremanId, address, smS, smE, seS, seE, snS, snE})
+        body: JSON.stringify({empId, empName, lat, lng, radius, isMobile, strictGps, foremanId, address, smS, smE, seS, seE, snS, snE})
     });
     const r = await res.json();
     if(r.success) {
@@ -889,6 +892,7 @@ function editWorker(empId) {
     document.getElementById('w-lng').value = w.lng;
     document.getElementById('w-rad').value = w.radius;
     document.getElementById('w-mob').checked = w.isMobile;
+    document.getElementById('w-strict-gps').checked = w.strictGps || false;
     const fSel = document.getElementById('w-foreman');
     if(fSel) fSel.value = w.foremanId || "";
     document.getElementById('w-addr').value = w.address || "";
@@ -923,6 +927,61 @@ async function quickLog(action) {
         }
     } catch(e) {
         showToast('Ошибка сети', true);
+    }
+}
+
+
+async function openNotesModal(empId) {
+    const { value: formValues } = await Swal.fire({
+        title: 'Примечания к дням',
+        html: `
+            <div class="flex flex-col gap-4 text-left">
+                <label class="flex flex-col gap-1">
+                    <span class="text-sm font-semibold">Выберите дату:</span>
+                    <input id="swal-note-date" type="date" class="border p-2 rounded" value="${new Date().toISOString().split('T')[0]}">
+                </label>
+                <label class="flex flex-col gap-1">
+                    <span class="text-sm font-semibold">Текст примечания (пойдет в отчет):</span>
+                    <textarea id="swal-note-text" class="border p-2 rounded h-24" placeholder="Был вызван на другой объект..."></textarea>
+                </label>
+            </div>
+            <script>
+                document.getElementById('swal-note-date').addEventListener('change', async (e) => {
+                    const date = e.target.value;
+                    const res = await fetch(\`${API_URL}/client/notes?date=${date}\`, { headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') } });
+                    const r = await res.json();
+                    if (r.success) {
+                        const note = r.notes.find(n => n.empId === '${empId}');
+                        document.getElementById('swal-note-text').value = note ? note.noteText : '';
+                    }
+                });
+                // Trigger change to load initial
+                document.getElementById('swal-note-date').dispatchEvent(new Event('change'));
+            </script>
+        `,
+        focusConfirm: false,
+        showCancelButton: true,
+        confirmButtonText: 'Сохранить',
+        cancelButtonText: 'Отмена',
+        preConfirm: () => {
+            return {
+                date: document.getElementById('swal-note-date').value,
+                noteText: document.getElementById('swal-note-text').value
+            }
+        }
+    });
+
+    if (formValues) {
+        const res = await fetch(`${API_URL}/client/notes`, { 
+            method: 'POST', 
+            headers: authHeaders(), 
+            body: JSON.stringify({ empId, date: formValues.date, noteText: formValues.noteText }) 
+        });
+        if((await res.json()).success) {
+            Swal.fire({ icon: 'success', title: 'Сохранено', timer: 1500, showConfirmButton: false });
+        } else {
+            Swal.fire({ icon: 'error', title: 'Ошибка сохранения' });
+        }
     }
 }
 
@@ -1656,6 +1715,7 @@ async function generatePDFReport() {
                     r.overtimeHours || '0',
                     r.nightHours || '0',
                     r.saturdayHours || '0',
+                    r.totalHours || '0',
                     r.totalHours || '0'
                 ]);
 
@@ -1668,11 +1728,12 @@ async function generatePDFReport() {
 
             doc.autoTable({
                 startY: 45,
-                head: [['Date', 'Day', 'In', 'Out', 'Lunch Ded.', 'Overtime', 'Night', 'Saturday', 'Total Hrs']],
+                head: [['Date', 'Day', 'In', 'Out', 'Lunch Ded.', 'Overtime', 'Night', 'Saturday', 'Total Hrs', 'Notes']],
                 body: tableBody,
                 theme: 'grid',
                 headStyles: { fillColor: [59, 130, 246] },
-                styles: { fontSize: 9, cellPadding: 2 },
+                styles: { fontSize: 8, cellPadding: 2 },
+                columnStyles: { 9: { cellWidth: 40 } },
             });
 
             let finalY = doc.lastAutoTable.finalY || 45;

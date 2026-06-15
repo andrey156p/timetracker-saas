@@ -159,6 +159,10 @@
         let workerShifts = null;
         let isClockedInGlobal = false;
         let shiftCheckerInterval = null;
+        let strictGpsEnabled = false;
+        let geofenceData = null;
+        let watchPosId = null;
+        let isPausedGps = false;
         let notifiedTimes = {}; // Store times we already notified for today
 
         function setLang(lang) {
@@ -208,9 +212,19 @@
                     if (r.isMobile) document.getElementById('emp-status').textContent = i18n[currentLang].status_mobile;
                     else document.getElementById('emp-status').textContent = i18n[currentLang].status_ok;
 
+                    strictGpsEnabled = r.strictGps;
+                    geofenceData = { lat: r.lat, lng: r.lng, radius: r.radius };
+
                     // Setup state
                     workerShifts = r.shifts || {};
-                    if (r.lastLog && r.lastLog.action === 'Вход') {
+                    if (r.lastLog && (r.lastLog.action === 'Вход' || r.lastLog.action === 'Авто-Продолжение' || r.lastLog.action === 'Авто-Пауза')) {
+                        if (r.lastLog.action === 'Авто-Пауза') {
+                            isPausedGps = true;
+                            document.getElementById('app-screen').classList.add('bg-yellow-50');
+                            document.getElementById('emp-status').textContent = 'ВНЕ ЗОНЫ (ПАУЗА)';
+                            document.getElementById('emp-status').classList.replace('text-green-600', 'text-yellow-600');
+                            document.getElementById('timer-display').style.color = 'orange';
+                        }
                         shiftStartTime = new Date(r.lastLog.time);
                         setBtnState(true); // true = clocked in
                     } else {
@@ -304,12 +318,14 @@
                 timerBox.classList.remove('hidden');
                 timerBox.classList.add('flex');
                 startTimer();
+                if (strictGpsEnabled && !geofenceData.isMobile) startGpsWatch();
             } else {
                 btnIn.classList.remove('disabled-btn');
                 btnOut.classList.add('disabled-btn');
                 timerBox.classList.remove('flex');
                 timerBox.classList.add('hidden');
                 stopTimer();
+                stopGpsWatch();
             }
         }
 
@@ -399,6 +415,77 @@
             date.setHours(h, m, 0, 0);
             date.setMinutes(date.getMinutes() - mins);
             return `${String(date.getHours()).padStart(2,'0')}:${String(date.getMinutes()).padStart(2,'0')}`;
+        }
+
+        
+        function getDist(lat1, lon1, lat2, lon2) {
+            if (!lat1 || !lon1 || !lat2 || !lon2) return 0;
+            const R = 6371e3;
+            const dLat = (lat2-lat1)*Math.PI/180;
+            const dLon = (lon2-lon1)*Math.PI/180;
+            const a = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)*Math.sin(dLon/2);
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        }
+
+        function startGpsWatch() {
+            if (!navigator.geolocation || watchPosId !== null) return;
+            watchPosId = navigator.geolocation.watchPosition(
+                async (pos) => {
+                    if (!geofenceData || !geofenceData.lat || !geofenceData.lng) return;
+                    const dist = getDist(geofenceData.lat, geofenceData.lng, pos.coords.latitude, pos.coords.longitude);
+                    
+                    if (dist > geofenceData.radius) {
+                        if (!isPausedGps) {
+                            isPausedGps = true;
+                            document.getElementById('app-screen').classList.add('bg-yellow-50');
+                            document.getElementById('emp-status').textContent = 'ВНЕ ЗОНЫ (ПАУЗА)';
+                            document.getElementById('emp-status').classList.remove('text-green-600');
+                            document.getElementById('emp-status').classList.add('text-yellow-600');
+                            document.getElementById('timer-display').style.color = 'orange';
+                            
+                            try {
+                                await fetch(API_URL + '/worker/gps-pause', {
+                                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ empId: localStorage.getItem('empId'), lat: pos.coords.latitude, lng: pos.coords.longitude })
+                                });
+                            } catch(e) {}
+                        }
+                    } else {
+                        if (isPausedGps) {
+                            isPausedGps = false;
+                            document.getElementById('app-screen').classList.remove('bg-yellow-50');
+                            document.getElementById('emp-status').textContent = i18n[currentLang].status_ok;
+                            document.getElementById('emp-status').classList.remove('text-yellow-600');
+                            document.getElementById('emp-status').classList.add('text-green-600');
+                            document.getElementById('timer-display').style.color = '';
+
+                            try {
+                                await fetch(API_URL + '/worker/gps-resume', {
+                                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ empId: localStorage.getItem('empId'), lat: pos.coords.latitude, lng: pos.coords.longitude })
+                                });
+                            } catch(e) {}
+                        }
+                    }
+                },
+                (err) => { console.error('GPS Watch Error', err); },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+        }
+
+        function stopGpsWatch() {
+            if (watchPosId !== null) {
+                navigator.geolocation.clearWatch(watchPosId);
+                watchPosId = null;
+            }
+            if (isPausedGps) {
+                isPausedGps = false;
+                document.getElementById('app-screen').classList.remove('bg-yellow-50');
+                document.getElementById('emp-status').textContent = i18n[currentLang].status_ok;
+                document.getElementById('emp-status').classList.remove('text-yellow-600');
+                document.getElementById('emp-status').classList.add('text-green-600');
+                document.getElementById('timer-display').style.color = '';
+            }
         }
 
         function startShiftChecker() {

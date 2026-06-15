@@ -40,6 +40,7 @@ model Client {
   schedules Schedule[]
   logs      Log[]
   invoices  Invoice[]
+  dailyNotes DailyNote[]
 }
 
 model Geofence {
@@ -59,6 +60,8 @@ model Geofence {
   shiftEveningEnd   String?
   shiftNightStart   String?
   shiftNightEnd     String?
+  
+  strictGps         Boolean    @default(false)
   
   createdAt DateTime @default(now())
 
@@ -97,6 +100,18 @@ model Log {
   
   clientId   String
   client     Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+}
+
+model DailyNote {
+  id         Int      @id @default(autoincrement())
+  empId      String
+  date       String   // Format: YYYY-MM-DD
+  noteText   String
+  
+  clientId   String
+  client     Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  
+  @@unique([empId, date])
 }
 
 model Invoice {

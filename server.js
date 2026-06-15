@@ -474,7 +474,7 @@ app.get('/api/client/employees', authClient, async (req, res) => {
 });
 
 app.post('/api/client/employees', authClient, requireClientRole, async (req, res) => {
-    const { empId, empName, lat, lng, radius, isMobile, address, smS, smE, seS, seE, snS, snE, foremanId } = req.body;
+    const { empId, empName, lat, lng, radius, isMobile, address, smS, smE, seS, seE, snS, snE, foremanId, strictGps } = req.body;
     try {
         await prisma.geofence.create({
             data: {
@@ -483,7 +483,9 @@ app.post('/api/client/employees', authClient, requireClientRole, async (req, res
                 shiftMorningStart: smS || null, shiftMorningEnd: smE || null,
                 shiftEveningStart: seS || null, shiftEveningEnd: seE || null,
                 shiftNightStart: snS || null, shiftNightEnd: snE || null,
-                foremanId: foremanId || null
+                foremanId: foremanId || null,
+                strictGps: !!strictGps,
+                strictGps: !!strictGps
             }
         });
         res.json({ success: true });
@@ -493,7 +495,7 @@ app.post('/api/client/employees', authClient, requireClientRole, async (req, res
 });
 
 app.put('/api/client/employees/:empId', authClient, requireClientRole, async (req, res) => {
-    const { empName, lat, lng, radius, isMobile, address, smS, smE, seS, seE, snS, snE, foremanId } = req.body;
+    const { empName, lat, lng, radius, isMobile, address, smS, smE, seS, seE, snS, snE, foremanId, strictGps } = req.body;
     try {
         await prisma.geofence.update({
             where: { empId: req.params.empId },
@@ -502,7 +504,8 @@ app.put('/api/client/employees/:empId', authClient, requireClientRole, async (re
                 shiftMorningStart: smS || null, shiftMorningEnd: smE || null,
                 shiftEveningStart: seS || null, shiftEveningEnd: seE || null,
                 shiftNightStart: snS || null, shiftNightEnd: snE || null,
-                foremanId: foremanId || null
+                foremanId: foremanId || null,
+                strictGps: !!strictGps
             }
         });
         res.json({ success: true });
@@ -768,10 +771,10 @@ app.get('/api/client/hours', authClient, async (req, res) => {
                 };
             }
             
-            if (log.action === 'Вход') {
+            if (log.action === 'Вход' || log.action === 'Авто-Продолжение') {
                 if (!empSessions[log.empId]) empSessions[log.empId] = [];
                 empSessions[log.empId].push({ in: log.dateTime, out: null, inManual: log.isManual });
-            } else if (log.action === 'Выход') {
+            } else if (log.action === 'Выход' || log.action === 'Авто-Пауза') {
                 if (empSessions[log.empId] && empSessions[log.empId].length > 0) {
                     const s = empSessions[log.empId];
                     if (!s[s.length-1].out) {
@@ -845,6 +848,19 @@ app.get('/api/client/hours', authClient, async (req, res) => {
             }
         }
 
+
+        // Fetch Notes
+        const notes = await prisma.dailyNote.findMany({
+            where: {
+                clientId: req.user.clientId,
+                date: { gte: startDate.split('T')[0], lte: endDate.split('T')[0] }
+            }
+        });
+        const notesMap = {}; // { empId_dateKey: "note text" }
+        notes.forEach(n => {
+            notesMap[n.empId + '_' + n.date] = n.noteText;
+        });
+
         // Flatten into a report
         const report = [];
         for (let empId in empDaily) {
@@ -867,7 +883,8 @@ app.get('/api/client/hours', authClient, async (req, res) => {
                         nightHours: data.nightHours.toFixed(2),
                         saturdayHours: data.saturdayHours.toFixed(2),
                         overtimeHours: overtime.toFixed(2),
-                        lunchDeduction: data.lunchDeduction.toFixed(2)
+                        lunchDeduction: data.lunchDeduction.toFixed(2),
+                        notes: notesMap[empId + '_' + dateKey] || ''
                     });
                 }
             }
@@ -905,6 +922,7 @@ app.get('/api/worker/geofence/:empId', async (req, res) => {
             lng: geofence.lng,
             radius: geofence.radius,
             isMobile: geofence.isMobile,
+            strictGps: geofence.strictGps,
             shifts: {
                 mS: geofence.shiftMorningStart || geofence.client.shiftMorningStart,
                 mE: geofence.shiftMorningEnd || geofence.client.shiftMorningEnd,
@@ -1006,6 +1024,108 @@ app.get('/api/worker/report/:empId', async (req, res) => {
         console.error(e);
         res.status(500).json({ success: false, error: e.message });
     }
+});
+
+
+// ==========================================
+// DAILY NOTES API
+// ==========================================
+app.get('/api/client/notes', authClient, async (req, res) => {
+    try {
+        const { date } = req.query; // YYYY-MM-DD
+        const notes = await prisma.dailyNote.findMany({
+            where: { clientId: req.user.clientId, date }
+        });
+        res.json({ success: true, notes });
+    } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+app.post('/api/client/notes', authClient, async (req, res) => {
+    try {
+        const { empId, date, noteText } = req.body;
+        if (!empId || !date) return res.status(400).json({ success: false, error: 'Missing empId or date' });
+        
+        if (!noteText) {
+            await prisma.dailyNote.deleteMany({
+                where: { empId, date, clientId: req.user.clientId }
+            });
+        } else {
+            const existing = await prisma.dailyNote.findUnique({
+                where: { empId_date: { empId, date } }
+            });
+            if (existing) {
+                await prisma.dailyNote.update({
+                    where: { id: existing.id },
+                    data: { noteText }
+                });
+            } else {
+                await prisma.dailyNote.create({
+                    data: { empId, date, noteText, clientId: req.user.clientId }
+                });
+            }
+        }
+        res.json({ success: true });
+    } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// ==========================================
+// WORKER STRICT GPS API
+// ==========================================
+app.post('/api/worker/gps-pause', async (req, res) => {
+    try {
+        const { empId, lat, lng } = req.body;
+        const gf = await prisma.geofence.findUnique({ where: { empId } });
+        if (!gf) return res.status(404).json({ success: false, error: 'Работник не найден' });
+        
+        await prisma.log.create({
+            data: { empId, action: 'Авто-Пауза', lat, lng, clientId: gf.clientId, geofenceId: gf.id }
+        });
+
+        // Append to Daily Note
+        const dateKey = new Date().toISOString().split('T')[0];
+        const timeStr = new Date().toLocaleTimeString('ru-RU', {hour: '2-digit', minute:'2-digit', timeZone: 'Asia/Jerusalem'});
+        const appendText = `Авто-пауза по GPS с ${timeStr}`;
+        
+        const existing = await prisma.dailyNote.findUnique({ where: { empId_date: { empId, date: dateKey } } });
+        if (existing) {
+            await prisma.dailyNote.update({
+                where: { id: existing.id },
+                data: { noteText: existing.noteText ? existing.noteText + '; ' + appendText : appendText }
+            });
+        } else {
+            await prisma.dailyNote.create({
+                data: { empId, date: dateKey, noteText: appendText, clientId: gf.clientId }
+            });
+        }
+
+        res.json({ success: true });
+    } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+app.post('/api/worker/gps-resume', async (req, res) => {
+    try {
+        const { empId, lat, lng } = req.body;
+        const gf = await prisma.geofence.findUnique({ where: { empId } });
+        if (!gf) return res.status(404).json({ success: false, error: 'Работник не найден' });
+        
+        await prisma.log.create({
+            data: { empId, action: 'Авто-Продолжение', lat, lng, clientId: gf.clientId, geofenceId: gf.id }
+        });
+
+        // Append to Daily Note
+        const dateKey = new Date().toISOString().split('T')[0];
+        const timeStr = new Date().toLocaleTimeString('ru-RU', {hour: '2-digit', minute:'2-digit', timeZone: 'Asia/Jerusalem'});
+        const appendText = `до ${timeStr}`;
+        
+        const existing = await prisma.dailyNote.findUnique({ where: { empId_date: { empId, date: dateKey } } });
+        if (existing) {
+            await prisma.dailyNote.update({
+                where: { id: existing.id },
+                data: { noteText: existing.noteText + ' ' + appendText }
+            });
+        }
+        res.json({ success: true });
+    } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
 app.post('/api/worker/log', async (req, res) => {

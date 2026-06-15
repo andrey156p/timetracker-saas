@@ -20,8 +20,8 @@ function getLocalOffsetMs(date) {
 const JWT_SECRET = 'SUPER_SECRET_TOKEN_V2';
 
 // VAPID keys for Web Push
-const publicVapidKey = process.env.VAPID_PUBLIC_KEY || 'BDC7_mP6zO2tXq2u1SXYA__5PZ5VvR6N9u9O12RQKQYhYf8j8kM_EwYQJ1r1RjQzQ2B_yZ_wYx7_kYvFvR6N9u9O12RQKQYhYf8j8kM';
-const privateVapidKey = process.env.VAPID_PRIVATE_KEY || 'wA2_Z7gW8Z6X9Z_Z9W_Z_A';
+const publicVapidKey = process.env.VAPID_PUBLIC_KEY || 'BLyPnNanMfF_PrfxgJeRAhASt2Yap9b65zJCtxo40i-9JFylQvzgO8KFwzxFVBLot7d20WrB7gnHspXi7G7kMy8';
+const privateVapidKey = process.env.VAPID_PRIVATE_KEY || '2uo_2gfvtFupS79gSnOFsZF9y3EQS2KGpT0P6ZFmcUM';
 try {
     webpush.setVapidDetails('mailto:test@test.com', publicVapidKey, privateVapidKey);
 } catch (e) {

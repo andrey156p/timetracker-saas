@@ -590,6 +590,8 @@ async function renderClientWorkers() {
     
     let html = '';
     
+    let workersOptions = currentWorkersData.map(e => `<option value="${e.empId}">${e.empName} (${e.empId})</option>`).join('');
+    
     if (userRole === 'foreman') {
         const onlineCount = currentWorkersData.filter(e => e.isOnline).length;
         const totalCount = currentWorkersData.length;
@@ -609,9 +611,7 @@ async function renderClientWorkers() {
                 }).join('');
             }
         } catch(e) {}
-
-        let workersOptions = currentWorkersData.map(e => `<option value="${e.empId}">${e.empName} (${e.empId})</option>`).join('');
-
+        
         html += `
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div class="bg-white p-6 rounded shadow border border-t-4 border-t-blue-500">
@@ -699,11 +699,33 @@ async function renderClientWorkers() {
             </div>
             </div>
         </div>
+        </div>
     </div>
     `;
     } // end else userRole !== 'foreman'
-    
+    // Get current month in YYYY-MM format
+    const now = new Date();
+    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
     html += `
+    <div class="bg-blue-50 p-4 rounded shadow mb-6 border border-blue-200">
+        <h3 class="font-bold mb-2 text-blue-800">Monthly PDF Report</h3>
+        <p class="text-xs text-gray-500 mb-3">Generate detailed English PDF reports for the end of the month.</p>
+        <div class="flex flex-wrap gap-4 items-end">
+            <div>
+                <label class="text-xs text-gray-600 block mb-1">Select Worker</label>
+                <select id="pdf-worker-id" class="border p-2 rounded bg-white w-48 text-sm">
+                    ${workersOptions}
+                </select>
+            </div>
+            <div>
+                <label class="text-xs text-gray-600 block mb-1">Select Month</label>
+                <input type="month" id="pdf-month" value="${currentMonth}" class="border p-2 rounded w-40 text-sm">
+            </div>
+            <button onclick="generatePDFReport()" id="btn-generate-pdf" class="bg-blue-600 text-white px-4 py-2 rounded shadow font-bold text-sm hover:bg-blue-700 transition">Download PDF</button>
+        </div>
+    </div>
+
     <h3 class="font-bold mb-2" data-i18n="tab_client_workers"></h3>
     <table class="w-full text-left border-collapse bg-white shadow rounded">
         <thead><tr class="bg-gray-100 border-b">
@@ -1254,7 +1276,7 @@ function exportClientHoursCSV() {
             </html>
         `;
         
-        const blob = new Blob([excelHtml], { type: 'application/vnd.ms-excel' });
+        const blob = new Blob(["\uFEFF", excelHtml], { type: 'application/vnd.ms-excel;charset=utf-8' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.setAttribute("href", url);
@@ -1543,4 +1565,142 @@ async function renderClientAnalytics() {
             }
         }
     });
+}
+
+async function generatePDFReport() {
+    const workerId = document.getElementById('pdf-worker-id').value;
+    const month = document.getElementById('pdf-month').value;
+    if (!month) return Swal.fire('Error', 'Please select a month', 'error');
+
+    const [yearStr, monthStr] = month.split('-');
+    const year = parseInt(yearStr);
+    const m = parseInt(monthStr) - 1;
+
+    const startDate = new Date(year, m, 1);
+    const endDate = new Date(year, m + 1, 0, 23, 59, 59, 999);
+    
+    // adjust to timezone offset to avoid JS date shifting when sending to server
+    const startStr = new Date(startDate.getTime() - startDate.getTimezoneOffset() * 60000).toISOString();
+    const endStr = new Date(endDate.getTime() - endDate.getTimezoneOffset() * 60000).toISOString();
+
+    const btn = document.getElementById('btn-generate-pdf');
+    const originalText = btn.textContent;
+    btn.textContent = 'Generating...';
+    btn.disabled = true;
+
+    try {
+        const res = await fetch(`${API_URL}/client/hours?startDate=${startStr}&endDate=${endStr}`, { headers: authHeaders() });
+        const r = await res.json();
+        
+        if (!r.success) throw new Error(r.error);
+
+        let reportData = r.report;
+        if (workerId !== 'ALL') {
+            reportData = reportData.filter(x => x.empId === workerId);
+        }
+
+        if (reportData.length === 0) {
+            Swal.fire('Info', 'No data found for the selected period.', 'info');
+            btn.textContent = originalText;
+            btn.disabled = false;
+            return;
+        }
+
+        // Group by empId
+        const workers = {};
+        reportData.forEach(row => {
+            if (!workers[row.empId]) {
+                workers[row.empId] = { name: row.name, rows: [] };
+            }
+            workers[row.empId].rows.push(row);
+        });
+
+        const { jsPDF } = window.jspdf;
+
+        for (const [empId, data] of Object.entries(workers)) {
+            const doc = new jsPDF();
+            
+            // Header
+            doc.setFontSize(18);
+            doc.text('Monthly Timesheet Report', 14, 20);
+            doc.setFontSize(12);
+            doc.text(`Employee: ${data.name} (ID: ${empId})`, 14, 30);
+            doc.text(`Month: ${month}`, 14, 38);
+
+            const tableBody = [];
+            let sumTotal = 0, sumOvertime = 0, sumNight = 0, sumSat = 0, sumLunch = 0;
+
+            data.rows.forEach(r => {
+                const dDate = new Date(r.date);
+                const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                const dayName = days[dDate.getDay()];
+                
+                let startTimes = [], endTimes = [];
+                if (r.times) {
+                    const shifts = r.times.split(', ');
+                    shifts.forEach(s => {
+                        const parts = s.split(' - ');
+                        if (parts.length === 2) {
+                            startTimes.push(parts[0].replace('*', ''));
+                            endTimes.push(parts[1].replace('*', ''));
+                        }
+                    });
+                }
+
+                tableBody.push([
+                    r.date,
+                    dayName,
+                    startTimes.join('\\n') || '-',
+                    endTimes.join('\\n') || '-',
+                    r.lunchDeduction || '0',
+                    r.overtimeHours || '0',
+                    r.nightHours || '0',
+                    r.saturdayHours || '0',
+                    r.totalHours || '0'
+                ]);
+
+                sumLunch += parseFloat(r.lunchDeduction || 0);
+                sumOvertime += parseFloat(r.overtimeHours || 0);
+                sumNight += parseFloat(r.nightHours || 0);
+                sumSat += parseFloat(r.saturdayHours || 0);
+                sumTotal += parseFloat(r.totalHours || 0);
+            });
+
+            doc.autoTable({
+                startY: 45,
+                head: [['Date', 'Day', 'In', 'Out', 'Lunch Ded.', 'Overtime', 'Night', 'Saturday', 'Total Hrs']],
+                body: tableBody,
+                theme: 'grid',
+                headStyles: { fillColor: [59, 130, 246] },
+                styles: { fontSize: 9, cellPadding: 2 },
+            });
+
+            let finalY = doc.lastAutoTable.finalY || 45;
+            
+            // Totals
+            const grossTotal = sumTotal + sumLunch;
+            doc.setFontSize(11);
+            doc.setFont(undefined, 'bold');
+            doc.text(`Total Hours (Gross): ${grossTotal.toFixed(2)}`, 14, finalY + 10);
+            doc.text(`Total After Lunch Deduction: ${sumTotal.toFixed(2)}`, 14, finalY + 16);
+            doc.setFont(undefined, 'normal');
+            doc.text(`Total Overtime: ${sumOvertime.toFixed(2)}`, 14, finalY + 22);
+            doc.text(`Total Night Hours: ${sumNight.toFixed(2)}`, 14, finalY + 28);
+            doc.text(`Total Saturday Hours: ${sumSat.toFixed(2)}`, 14, finalY + 34);
+
+            // Signature Area
+            const managerName = r.clientName || 'Manager';
+            doc.text(`Manager: ${managerName}`, 14, finalY + 50);
+            doc.text(`Date: ____________________`, 14, finalY + 60);
+            doc.text(`Signature: ____________________`, 100, finalY + 60);
+
+            doc.save(`Timesheet_${empId}_${month}.pdf`);
+        }
+
+    } catch(e) {
+        Swal.fire('Error', e.message, 'error');
+    }
+
+    btn.textContent = originalText;
+    btn.disabled = false;
 }

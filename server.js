@@ -763,6 +763,7 @@ app.get('/api/client/hours', authClient, async (req, res) => {
                     totalHours: 0,
                     nightHours: 0,
                     saturdayHours: 0,
+                    lunchDeduction: 0,
                     shifts: []
                 };
             }
@@ -784,7 +785,7 @@ app.get('/api/client/hours', authClient, async (req, res) => {
                             empDaily[log.empId][shiftDateKey] = {
                                 name: empName,
                                 isDeleted: isDeleted,
-                                totalHours: 0, nightHours: 0, saturdayHours: 0, shifts: []
+                                totalHours: 0, nightHours: 0, saturdayHours: 0, lunchDeduction: 0, shifts: []
                             };
                         }
                         
@@ -793,10 +794,9 @@ app.get('/api/client/hours', authClient, async (req, res) => {
                         empDaily[log.empId][shiftDateKey].shifts.push(shiftStr);
 
                         let diffHours = (outTime - inTime) / 3600000;
-                        let deducted = false;
                         if (client.autoDeductLunch && diffHours >= 6) {
                             diffHours -= 0.5;
-                            deducted = true;
+                            empDaily[log.empId][shiftDateKey].lunchDeduction += 0.5;
                         }
                         
                         empDaily[log.empId][shiftDateKey].totalHours += diffHours;
@@ -866,7 +866,8 @@ app.get('/api/client/hours', authClient, async (req, res) => {
                         totalHours: data.totalHours.toFixed(2),
                         nightHours: data.nightHours.toFixed(2),
                         saturdayHours: data.saturdayHours.toFixed(2),
-                        overtimeHours: overtime.toFixed(2)
+                        overtimeHours: overtime.toFixed(2),
+                        lunchDeduction: data.lunchDeduction.toFixed(2)
                     });
                 }
             }
@@ -877,7 +878,7 @@ app.get('/api/client/hours', authClient, async (req, res) => {
 
         console.log("SENDING REPORT:", JSON.stringify(report, null, 2));
 
-        res.json({ success: true, report });
+        res.json({ success: true, report, clientName: client.name });
     } catch(e) { console.error(e); res.status(500).json({ success: false, error: e.message }); }
 });
 

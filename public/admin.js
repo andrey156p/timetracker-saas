@@ -601,23 +601,23 @@ async function renderClientWorkers() {
             <div class="flex space-x-4">
                 <div>
                     <label class="text-xs text-gray-500 block" data-i18n="morning"></label>
-                    <div class="flex space-x-1">
-                        <input type="time" id="w-sh-m-s" class="border p-1 rounded w-20 text-center font-mono text-xs">
-                        <input type="time" id="w-sh-m-e" class="border p-1 rounded w-20 text-center font-mono text-xs">
+                    <div class="flex space-x-2">
+                        <input type="time" id="w-sh-m-s" class="border p-1 rounded w-28 text-center font-mono text-sm">
+                        <input type="time" id="w-sh-m-e" class="border p-1 rounded w-28 text-center font-mono text-sm">
                     </div>
                 </div>
                 <div>
                     <label class="text-xs text-gray-500 block" data-i18n="evening"></label>
-                    <div class="flex space-x-1">
-                        <input type="time" id="w-sh-e-s" class="border p-1 rounded w-20 text-center font-mono text-xs">
-                        <input type="time" id="w-sh-e-e" class="border p-1 rounded w-20 text-center font-mono text-xs">
+                    <div class="flex space-x-2">
+                        <input type="time" id="w-sh-e-s" class="border p-1 rounded w-28 text-center font-mono text-sm">
+                        <input type="time" id="w-sh-e-e" class="border p-1 rounded w-28 text-center font-mono text-sm">
                     </div>
                 </div>
                 <div>
                     <label class="text-xs text-gray-500 block" data-i18n="night"></label>
-                    <div class="flex space-x-1">
-                        <input type="time" id="w-sh-n-s" class="border p-1 rounded w-20 text-center font-mono text-xs">
-                        <input type="time" id="w-sh-n-e" class="border p-1 rounded w-20 text-center font-mono text-xs">
+                    <div class="flex space-x-2">
+                        <input type="time" id="w-sh-n-s" class="border p-1 rounded w-28 text-center font-mono text-sm">
+                        <input type="time" id="w-sh-n-e" class="border p-1 rounded w-28 text-center font-mono text-sm">
                     </div>
                 </div>
             </div>

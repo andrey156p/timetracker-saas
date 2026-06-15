@@ -1,4 +1,4 @@
-const CACHE_NAME = 'timetracker-cache-v11';
+const CACHE_NAME = 'timetracker-cache-v12';
 const urlsToCache = [
   './',
   './app.html',
@@ -8,16 +8,43 @@ const urlsToCache = [
 
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(urlsToCache))
+    caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache))
   );
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', event => {
+  event.waitUntil(self.clients.claim());
 });
 
 self.addEventListener('fetch', event => {
-  // Try network first, fallback to cache (ideal for PWA tracking app where API calls matter)
   event.respondWith(
-    fetch(event.request).catch(() => {
-      return caches.match(event.request);
-    })
+    fetch(event.request).catch(() => caches.match(event.request))
   );
+});
+
+self.addEventListener('push', event => {
+  let data = {};
+  try {
+    if(event.data) data = event.data.json();
+  } catch(e){}
+  
+  const title = data.title || 'TimeTracker SaaS';
+  const options = {
+    body: data.body || 'У вас новое уведомление',
+    icon: './app_icon.png',
+    badge: './app_icon.png'
+  };
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  event.waitUntil(clients.matchAll({type: 'window'}).then(clientsArr => {
+    if (clientsArr.length) {
+        return clientsArr[0].focus();
+    } else {
+        return clients.openWindow('/');
+    }
+  }));
 });

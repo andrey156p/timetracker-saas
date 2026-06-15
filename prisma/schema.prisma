@@ -33,7 +33,9 @@ model Client {
   tariffMode   String @default("per_user") // "per_user" or "per_hour"
   pricePerUser Float  @default(0.0)
   pricePerHour Float  @default(0.0)
+  autoDeductLunch Boolean @default(false)
 
+  foremen   Foreman[]
   geofences Geofence[]
   schedules Schedule[]
   logs      Log[]
@@ -61,6 +63,8 @@ model Geofence {
   createdAt DateTime @default(now())
 
   client    Client     @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  foremanId String?
+  foreman   Foreman?   @relation(fields: [foremanId], references: [id], onDelete: SetNull)
   
   logs      Log[]
   schedules Schedule[]
@@ -103,5 +107,27 @@ model Invoice {
   endDate   DateTime
   amount    Float
   status    String   @default("pending") // "pending" or "paid"
+  createdAt DateTime @default(now())
+}
+
+model Foreman {
+  id        String     @id @default(uuid())
+  clientId  String
+  client    Client     @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  username  String     @unique
+  password  String
+  name      String
+  isActive  Boolean    @default(true)
+  createdAt DateTime   @default(now())
+
+  geofences Geofence[]
+}
+
+model PushSubscription {
+  id        Int      @id @default(autoincrement())
+  empId     String
+  endpoint  String
+  p256dh    String
+  auth      String
   createdAt DateTime @default(now())
 }

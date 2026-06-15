@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
+const webpush = require('web-push');
 const { PrismaClient } = require('@prisma/client');
 const path = require('path');
 const fs = require('fs');
@@ -17,6 +18,15 @@ function getLocalOffsetMs(date) {
 }
 
 const JWT_SECRET = 'SUPER_SECRET_TOKEN_V2';
+
+// VAPID keys for Web Push
+const publicVapidKey = process.env.VAPID_PUBLIC_KEY || 'BDC7_mP6zO2tXq2u1SXYA__5PZ5VvR6N9u9O12RQKQYhYf8j8kM_EwYQJ1r1RjQzQ2B_yZ_wYx7_kYvFvR6N9u9O12RQKQYhYf8j8kM';
+const privateVapidKey = process.env.VAPID_PRIVATE_KEY || 'wA2_Z7gW8Z6X9Z_Z9W_Z_A';
+try {
+    webpush.setVapidDetails('mailto:test@test.com', publicVapidKey, privateVapidKey);
+} catch (e) {
+    console.log("Web Push VAPID setup failed", e);
+}
 
 async function getOwnerPassword() {
     let settings = await prisma.saaSSettings.findFirst();
@@ -44,10 +54,15 @@ function authClient(req, res, next) {
     if (!authHeader) return res.status(401).json({ success: false, error: 'Токен отсутствует' });
     try {
         const decoded = jwt.verify(authHeader.split(' ')[1], JWT_SECRET);
-        if (decoded.role !== 'client') throw new Error();
+        if (decoded.role !== 'client' && decoded.role !== 'foreman') throw new Error();
         req.user = decoded;
         next();
     } catch(e) { res.status(403).json({ success: false, error: 'Доступ запрещен' }); }
+}
+
+function requireClientRole(req, res, next) {
+    if (req.user.role !== 'client') return res.status(403).json({ success: false, error: 'Доступ только для руководителя' });
+    next();
 }
 
 // ==========================================
@@ -63,7 +78,7 @@ app.post('/api/auth/login', async (req, res) => {
         return res.json({ success: true, role: 'owner', token });
     }
 
-    // Check Client (Foreman)
+    // Check Client (Manager)
     const client = await prisma.client.findUnique({ where: { username } });
     if (client && client.password === password) {
         if (!client.isActive) return res.status(403).json({ success: false, error: 'Ваш аккаунт заблокирован за неуплату' });
@@ -71,7 +86,37 @@ app.post('/api/auth/login', async (req, res) => {
         return res.json({ success: true, role: 'client', token, clientId: client.id });
     }
 
+    // Check Foreman
+    const foreman = await prisma.foreman.findUnique({ where: { username } });
+    if (foreman && foreman.password === password) {
+        if (!foreman.isActive) return res.status(403).json({ success: false, error: 'Ваш аккаунт заблокирован' });
+        const token = jwt.sign({ role: 'foreman', clientId: foreman.clientId, foremanId: foreman.id }, JWT_SECRET, { expiresIn: '7d' });
+        return res.json({ success: true, role: 'foreman', token, clientId: foreman.clientId, foremanId: foreman.id });
+    }
+
     res.status(401).json({ success: false, error: 'Неверные учетные данные' });
+});
+
+// Push notification subscription
+app.post('/api/worker/subscribe', async (req, res) => {
+    try {
+        const { empId, subscription } = req.body;
+        if (!empId || !subscription) return res.json({ success: false, error: 'Missing data' });
+        
+        await prisma.pushSubscription.create({
+            data: {
+                empId,
+                endpoint: subscription.endpoint,
+                p256dh: subscription.keys.p256dh,
+                auth: subscription.keys.auth
+            }
+        });
+        
+        res.json({ success: true });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false, error: e.message });
+    }
 });
 
 // ==========================================
@@ -93,7 +138,12 @@ app.post('/api/admin/password', authOwner, async (req, res) => {
 });
 
 app.get('/api/admin/clients', authOwner, async (req, res) => {
-    const clients = await prisma.client.findMany({ select: { id: true, username: true, name: true, isActive: true, tariffMode: true, pricePerUser: true, pricePerHour: true } });
+    const clients = await prisma.client.findMany({ 
+        select: { 
+            id: true, username: true, name: true, isActive: true, tariffMode: true, pricePerUser: true, pricePerHour: true,
+            _count: { select: { foremen: true, geofences: true } }
+        } 
+    });
     res.json({ success: true, clients });
 });
 
@@ -364,13 +414,64 @@ app.delete('/api/admin/invoices/:id', authOwner, async (req, res) => {
 // ==========================================
 // FOREMAN (CLIENT) ROUTES
 // ==========================================
+// ==========================================
+// FOREMAN ROUTES (Client level)
+// ==========================================
+app.get('/api/client/foremen', authClient, requireClientRole, async (req, res) => {
+    const foremen = await prisma.foreman.findMany({ where: { clientId: req.user.clientId } });
+    res.json({ success: true, foremen });
+});
+
+app.post('/api/client/foremen', authClient, requireClientRole, async (req, res) => {
+    try {
+        const { username, password, name } = req.body;
+        const foreman = await prisma.foreman.create({ data: { username, password, name, clientId: req.user.clientId } });
+        res.json({ success: true, foreman });
+    } catch (e) { res.status(400).json({ success: false, error: 'Логин уже существует' }); }
+});
+
+app.post('/api/client/foremen/:id/toggle', authClient, requireClientRole, async (req, res) => {
+    const { id } = req.params;
+    const foreman = await prisma.foreman.findUnique({ where: { id, clientId: req.user.clientId } });
+    if (!foreman) return res.status(404).json({ success: false });
+    await prisma.foreman.update({ where: { id }, data: { isActive: !foreman.isActive } });
+    res.json({ success: true, isActive: !foreman.isActive });
+});
+
+app.delete('/api/client/foremen/:id', authClient, requireClientRole, async (req, res) => {
+    const { id } = req.params;
+    await prisma.foreman.delete({ where: { id, clientId: req.user.clientId } });
+    res.json({ success: true });
+});
+
+// ==========================================
+// EMPLOYEES ROUTES
+// ==========================================
 app.get('/api/client/employees', authClient, async (req, res) => {
-    const employees = await prisma.geofence.findMany({ where: { clientId: req.user.clientId } });
+    let where = { clientId: req.user.clientId };
+    if (req.user.role === 'foreman') where.foremanId = req.user.foremanId;
+    
+    let employees = await prisma.geofence.findMany({ where });
+    
+    // Check if they are online
+    for (let emp of employees) {
+        const openLog = await prisma.log.findFirst({
+            where: { clientId: req.user.clientId, empId: emp.empId, action: 'Вход' },
+            orderBy: { dateTime: 'desc' }
+        });
+        const lastLog = await prisma.log.findFirst({
+            where: { clientId: req.user.clientId, empId: emp.empId },
+            orderBy: { dateTime: 'desc' }
+        });
+        
+        emp.isOnline = openLog && lastLog && lastLog.id === openLog.id;
+    }
+
     res.json({ success: true, employees });
 });
 
-app.post('/api/client/employees', authClient, async (req, res) => {
-    const { empId, empName, lat, lng, radius, isMobile, address, smS, smE, seS, seE, snS, snE } = req.body;
+app.post('/api/client/employees', authClient, requireClientRole, async (req, res) => {
+    const { empId, empName, lat, lng, radius, isMobile, address, smS, smE, seS, seE, snS, snE, foremanId } = req.body;
     try {
         await prisma.geofence.create({
             data: {
@@ -378,7 +479,8 @@ app.post('/api/client/employees', authClient, async (req, res) => {
                 empId, empName, lat: parseFloat(lat)||0, lng: parseFloat(lng)||0, radius: parseFloat(radius)||0, isMobile: !!isMobile, address: address || null,
                 shiftMorningStart: smS || null, shiftMorningEnd: smE || null,
                 shiftEveningStart: seS || null, shiftEveningEnd: seE || null,
-                shiftNightStart: snS || null, shiftNightEnd: snE || null
+                shiftNightStart: snS || null, shiftNightEnd: snE || null,
+                foremanId: foremanId || null
             }
         });
         res.json({ success: true });
@@ -387,8 +489,8 @@ app.post('/api/client/employees', authClient, async (req, res) => {
     }
 });
 
-app.put('/api/client/employees/:empId', authClient, async (req, res) => {
-    const { empName, lat, lng, radius, isMobile, address, smS, smE, seS, seE, snS, snE } = req.body;
+app.put('/api/client/employees/:empId', authClient, requireClientRole, async (req, res) => {
+    const { empName, lat, lng, radius, isMobile, address, smS, smE, seS, seE, snS, snE, foremanId } = req.body;
     try {
         await prisma.geofence.update({
             where: { empId: req.params.empId },
@@ -396,7 +498,8 @@ app.put('/api/client/employees/:empId', authClient, async (req, res) => {
                 empName, lat: parseFloat(lat)||0, lng: parseFloat(lng)||0, radius: parseFloat(radius)||0, isMobile: !!isMobile, address: address || null,
                 shiftMorningStart: smS || null, shiftMorningEnd: smE || null,
                 shiftEveningStart: seS || null, shiftEveningEnd: seE || null,
-                shiftNightStart: snS || null, shiftNightEnd: snE || null
+                shiftNightStart: snS || null, shiftNightEnd: snE || null,
+                foremanId: foremanId || null
             }
         });
         res.json({ success: true });
@@ -483,11 +586,16 @@ app.get('/api/client/settings', authClient, async (req, res) => {
     res.json({ success: true, settings: client });
 });
 
-app.post('/api/client/settings', authClient, async (req, res) => {
-    const { shiftMorningStart, shiftMorningEnd, shiftEveningStart, shiftEveningEnd, shiftNightStart, shiftNightEnd } = req.body;
+app.post('/api/client/settings', authClient, requireClientRole, async (req, res) => {
+    const { shiftMorningStart, shiftMorningEnd, shiftEveningStart, shiftEveningEnd, shiftNightStart, shiftNightEnd, autoDeductLunch } = req.body;
     await prisma.client.update({
         where: { id: req.user.clientId },
-        data: { shiftMorningStart, shiftMorningEnd, shiftEveningStart, shiftEveningEnd, shiftNightStart, shiftNightEnd }
+        data: { 
+            shiftMorningStart, shiftMorningEnd, 
+            shiftEveningStart, shiftEveningEnd, 
+            shiftNightStart, shiftNightEnd,
+            autoDeductLunch: !!autoDeductLunch
+        }
     });
     res.json({ success: true });
 });
@@ -576,7 +684,8 @@ app.get('/api/client/hours', authClient, async (req, res) => {
                 dateTime: {
                     gte: new Date(startDate),
                     lte: new Date(endDate)
-                }
+                },
+                ...(req.user.role === 'foreman' ? { geofence: { foremanId: req.user.foremanId } } : {})
             },
             include: { geofence: true },
             orderBy: { dateTime: 'asc' }
@@ -638,7 +747,13 @@ app.get('/api/client/hours', authClient, async (req, res) => {
                         const shiftStr = `${inTime.toLocaleTimeString('ru-RU', {hour: '2-digit', minute:'2-digit', timeZone: 'Asia/Jerusalem'})} - ${outTime.toLocaleTimeString('ru-RU', {hour: '2-digit', minute:'2-digit', timeZone: 'Asia/Jerusalem'})}${isManualShift ? '*' : ''}`;
                         empDaily[log.empId][shiftDateKey].shifts.push(shiftStr);
 
-                        const diffHours = (outTime - inTime) / 3600000;
+                        let diffHours = (outTime - inTime) / 3600000;
+                        let deducted = false;
+                        if (client.autoDeductLunch && diffHours >= 6) {
+                            diffHours -= 0.5;
+                            deducted = true;
+                        }
+                        
                         empDaily[log.empId][shiftDateKey].totalHours += diffHours;
                         
                         if (isSaturday(inTime) || isSaturday(outTime)) {
@@ -879,6 +994,51 @@ app.post('/api/worker/log', async (req, res) => {
 
         res.json({ success: true });
     } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// ==========================================
+// CRON: PUSH NOTIFICATIONS
+// ==========================================
+app.get('/api/cron/push', async (req, res) => {
+    try {
+        const now = new Date();
+        const curTimeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+        
+        const workers = await prisma.geofence.findMany({
+            include: { logs: { where: { dateTime: { gte: new Date(now.setHours(0,0,0,0)) } } } }
+        });
+        
+        let sentCount = 0;
+        for (const w of workers) {
+            const starts = [w.shiftMorningStart, w.shiftEveningStart, w.shiftNightStart].filter(Boolean);
+            if (starts.includes(curTimeStr)) {
+                const clockedIn = w.logs.some(l => l.action === 'Вход');
+                if (!clockedIn) {
+                    const subs = await prisma.pushSubscription.findMany({ where: { empId: w.empId } });
+                    for (const sub of subs) {
+                        try {
+                            await webpush.sendNotification({
+                                endpoint: sub.endpoint,
+                                keys: { p256dh: sub.p256dh, auth: sub.auth }
+                            }, JSON.stringify({
+                                title: 'Смена началась!',
+                                body: 'Вы забыли нажать "Вход" в приложении.'
+                            }));
+                            sentCount++;
+                        } catch(e) {
+                            if (e.statusCode === 410) {
+                                await prisma.pushSubscription.delete({ where: { id: sub.id } });
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        res.json({ success: true, sent: sentCount });
+    } catch (e) {
+        console.error("Cron Error:", e);
+        res.status(500).json({ error: e.message });
+    }
 });
 
 const PORT = process.env.PORT || 3000;

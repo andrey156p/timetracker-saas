@@ -219,6 +219,7 @@
                     }
                     
                     startShiftChecker();
+                    subscribePush();
 
                 } else {
                     localStorage.removeItem('empId');
@@ -227,6 +228,68 @@
             } catch (e) {
                 showError(i18n[currentLang].err_network);
             }
+        }
+
+        async function flushQueue() {
+            let queue = JSON.parse(localStorage.getItem('offlineQueue') || '[]');
+            if (queue.length === 0) return;
+            
+            // Try to send offline logs
+            const stillOffline = [];
+            for (let item of queue) {
+                try {
+                    const res = await fetch(`${API_URL}/worker/log`, {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ empId: item.empId, action: item.action, lat: item.lat, lng: item.lng, timestamp: item.timestamp })
+                    });
+                    const r = await res.json();
+                    if (!r.success && r.error === 'Вы вне зоны объекта!') {
+                        // Was out of zone, ignore it or show error? Best to ignore failed offline logs silently to not block queue
+                    }
+                } catch(e) {
+                    stillOffline.push(item);
+                }
+            }
+            if (queue.length !== stillOffline.length) {
+                showToast("Офлайн данные успешно отправлены на сервер", false);
+            }
+            localStorage.setItem('offlineQueue', JSON.stringify(stillOffline));
+        }
+
+        window.addEventListener('online', flushQueue);
+        setInterval(flushQueue, 60000); // Also check every minute
+
+        const publicVapidKey = 'BDC7_mP6zO2tXq2u1SXYA__5PZ5VvR6N9u9O12RQKQYhYf8j8kM_EwYQJ1r1RjQzQ2B_yZ_wYx7_kYvFvR6N9u9O12RQKQYhYf8j8kM';
+        
+        async function subscribePush() {
+            if ('serviceWorker' in navigator && 'PushManager' in window) {
+                try {
+                    const register = await navigator.serviceWorker.register('/sw.js');
+                    const subscription = await register.pushManager.subscribe({
+                        userVisibleOnly: true,
+                        applicationServerKey: urlBase64ToUint8Array(publicVapidKey)
+                    });
+                    
+                    await fetch(`${API_URL}/worker/subscribe`, {
+                        method: 'POST',
+                        body: JSON.stringify({ empId, subscription }),
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                } catch(e) {
+                    console.error('Push registration failed', e);
+                }
+            }
+        }
+        
+        function urlBase64ToUint8Array(base64String) {
+            const padding = '='.repeat((4 - base64String.length % 4) % 4);
+            const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+            const rawData = window.atob(base64);
+            const outputArray = new Uint8Array(rawData.length);
+            for (let i = 0; i < rawData.length; ++i) {
+                outputArray[i] = rawData.charCodeAt(i);
+            }
+            return outputArray;
         }
 
         function setBtnState(isClockedIn) {
@@ -422,7 +485,19 @@
                     }
                 }
             } catch (e) {
-                Swal.fire({ icon: 'error', title: i18n[currentLang].error, text: i18n[currentLang].err_network, confirmButtonColor: '#ef4444' });
+                // Офлайн режим
+                let queue = JSON.parse(localStorage.getItem('offlineQueue') || '[]');
+                queue.push({ empId, action, lat: coords.lat, lng: coords.lng, timestamp: new Date().toISOString() });
+                localStorage.setItem('offlineQueue', JSON.stringify(queue));
+
+                if (action === 'Вход') {
+                    shiftStartTime = new Date();
+                    setBtnState(true);
+                } else {
+                    shiftStartTime = null;
+                    setBtnState(false);
+                }
+                Swal.fire({ icon: 'info', title: 'Офлайн', text: 'Нет интернета. Данные сохранены локально и будут отправлены при подключении.', confirmButtonColor: '#3b82f6' });
             }
         }
 

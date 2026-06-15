@@ -19,8 +19,8 @@ function showToast(msg, isError=false){
 const i18n = {
     ru: {
         username: "Логин", password: "Пароль", login_btn: "Войти", logout: "Выйти",
-        tab_owner_clients: "Управление руководителями", tab_owner_billing: "Биллинг", tab_owner_invoices: "Счета", tab_owner_pass: "Смена пароля",
-        tab_client_workers: "Работники", tab_client_shifts: "Смены",
+        tab_owner_clients: "Компании (Клиенты)", tab_owner_billing: "Биллинг", tab_owner_invoices: "Счета", tab_owner_pass: "Пароль", tab_owner_hierarchy: "Иерархия",
+        tab_client_workers: "Работники", tab_client_shifts: "Отчёты", tab_client_foremen: "Бригадиры", tab_client_analytics: "Аналитика",
         add_foreman: "Создать руководителя", foreman_name: "Имя/Название", foreman_login: "Логин", foreman_pass: "Пароль",
         save: "Сохранить", action: "Действие", block: "Заблокировать", unblock: "Разблокировать",
         period: "Период", from: "От", to: "До", load: "Загрузить", clear_btn: "Сброс", all_workers: "Все работники",
@@ -94,7 +94,8 @@ const i18n = {
         qr_print: "QR / הדפס", copy_link: "העתק קישור", reset_pass: "סיסמה", tariff: "תעריף",
         per_hour: "לשעה", per_worker: "לעובד ליום", block_btn: "חסום", unblock_btn: "שחרר", copied: "הועתק!",
         qr_scan_text: "סרוק קוד זה במצלמת הטלפון שלך כדי להתקין את אפליקציית מעקב הזמן.",
-        edit: "ערוך", indiv_shifts: "משמרות אישיות (ריק = גלובלי)", save_changes: "שמור שינויים", cancel: "ביטול"
+        edit: "ערוך", indiv_shifts: "משמרות אישיות (ריק = גלובלי)", save_changes: "שמור שינויים", cancel: "ביטול",
+        tab_owner_hierarchy: "היררכיה", tab_client_foremen: "מנהלי עבודה", tab_client_analytics: "ניתוח נתונים"
     }
 };
 
@@ -115,6 +116,7 @@ let currentWorkersData = [];
 let editingWorkerId = null;
 
 const ownerTabs = [
+    { id: 'owner-hierarchy', titleKey: 'tab_owner_hierarchy', url: 'timetracker/owner/hierarchy' },
     { id: 'owner-clients', titleKey: 'tab_owner_clients', url: 'timetracker/owner/clients' },
     { id: 'owner-billing', titleKey: 'tab_owner_billing', url: 'timetracker/owner/billing' },
     { id: 'owner-invoices', titleKey: 'tab_owner_invoices', url: 'timetracker/owner/invoices' },
@@ -123,7 +125,15 @@ const ownerTabs = [
 
 const clientTabs = [
     { id: 'client-workers', titleKey: 'tab_client_workers', url: 'timetracker/client/workers' },
-    { id: 'client-shifts', titleKey: 'tab_client_shifts', url: 'timetracker/client/shifts' }
+    { id: 'client-foremen', titleKey: 'tab_client_foremen', url: 'timetracker/client/foremen' },
+    { id: 'client-shifts', titleKey: 'tab_client_shifts', url: 'timetracker/client/shifts' },
+    { id: 'client-analytics', titleKey: 'tab_client_analytics', url: 'timetracker/client/analytics' }
+];
+
+const foremanTabs = [
+    { id: 'client-workers', titleKey: 'tab_client_workers', url: 'timetracker/foreman/workers' },
+    { id: 'client-shifts', titleKey: 'tab_client_shifts', url: 'timetracker/foreman/shifts' },
+    { id: 'client-analytics', titleKey: 'tab_client_analytics', url: 'timetracker/foreman/analytics' }
 ];
 
 function setLang(lang) {
@@ -192,12 +202,16 @@ function initApp() {
     
     translatePage();
     renderTabs();
-    const tabs = userRole === 'owner' ? ownerTabs : clientTabs;
+    let tabs = clientTabs;
+    if (userRole === 'owner') tabs = ownerTabs;
+    else if (userRole === 'foreman') tabs = foremanTabs;
     loadTab(tabs[0].id);
 }
 
 function renderTabs() {
-    const tabs = userRole === 'owner' ? ownerTabs : clientTabs;
+    let tabs = clientTabs;
+    if (userRole === 'owner') tabs = ownerTabs;
+    else if (userRole === 'foreman') tabs = foremanTabs;
     const container = document.getElementById('tabs-container');
     container.innerHTML = '';
     
@@ -224,7 +238,10 @@ function renderTabs() {
 
 function loadTab(tabId) {
     currentTabId = tabId;
-    const tabs = userRole === 'owner' ? ownerTabs : clientTabs;
+    let tabs = clientTabs;
+    if (userRole === 'owner') tabs = ownerTabs;
+    else if (userRole === 'foreman') tabs = foremanTabs;
+    
     const tabObj = tabs.find(t => t.id === tabId);
     if(tabObj) document.getElementById('url-bar').textContent = "https://" + tabObj.url;
     
@@ -233,12 +250,15 @@ function loadTab(tabId) {
     const content = document.getElementById('view-content');
     content.innerHTML = '<div class="text-center mt-10 text-gray-400">Loading...</div>';
     
-    if (tabId === 'owner-clients') renderOwnerClients();
+    if (tabId === 'owner-hierarchy') renderOwnerHierarchy();
+    else if (tabId === 'owner-clients') renderOwnerClients();
     else if (tabId === 'owner-billing') renderOwnerBilling();
     else if (tabId === 'owner-invoices') renderOwnerInvoices();
     else if (tabId === 'owner-pass') renderOwnerPassword();
     else if (tabId === 'client-workers') renderClientWorkers();
+    else if (tabId === 'client-foremen') renderClientForemen();
     else if (tabId === 'client-shifts') renderClientShifts();
+    else if (tabId === 'client-analytics') renderClientAnalytics();
 }
 
 async function renderOwnerClients() {
@@ -556,6 +576,7 @@ async function renderClientWorkers() {
             <div><label class="text-xs text-gray-500" data-i18n="address"></label><input id="w-addr" class="border p-1 rounded w-64 bg-gray-50" readonly></div>
             <div><label class="text-xs text-gray-500" data-i18n="rad"></label><input id="w-rad" class="border p-1 rounded w-20" value="500"></div>
             <div class="flex items-center mb-1"><input type="checkbox" id="w-mob" class="mr-1"><label class="text-xs" data-i18n="mobile"></label></div>
+            ${userRole === 'client' ? `<div><label class="text-xs text-gray-500 block">Бригадир</label><select id="w-foreman" class="border p-1 rounded bg-white" style="max-width: 150px;"></select></div>` : ''}
             <button onclick="saveWorker()" id="btn-save-worker" class="bg-blue-600 text-white px-3 py-1 rounded" data-i18n="save"></button>
             <button onclick="cancelEditWorker()" id="btn-cancel-worker" class="hidden bg-gray-400 text-white px-3 py-1 rounded" data-i18n="cancel"></button>
         </div>
@@ -612,9 +633,10 @@ async function renderClientWorkers() {
         if (seS) shiftStr += `В:${seS}-${seE} `;
         if (snS) shiftStr += `Н:${snS}-${snE} `;
         const shiftHtml = hasShifts ? `<div class="text-[10px] text-green-700 font-bold bg-green-100 border border-green-200 rounded px-1.5 py-0.5 inline-block mt-1">Особые смены: ${shiftStr.trim()}</div>` : '';
+        const onlineDot = e.isOnline ? `<span class="inline-block w-2.5 h-2.5 bg-green-500 rounded-full ml-1" title="Онлайн (на смене)"></span>` : '';
         html += `<tr class="border-b hover:bg-gray-50">
             <td class="p-2">${e.empId}</td>
-            <td class="p-2 font-medium">${e.empName} ${shiftHtml}</td>
+            <td class="p-2 font-medium flex items-center">${e.empName} ${onlineDot} ${shiftHtml}</td>
             <td class="p-2 text-xs text-gray-500">${e.address ? e.address : e.lat + ', ' + e.lng} <br><span class="text-[10px] text-gray-400">R: ${e.radius}m</span></td>
             <td class="p-2"><input type="checkbox" onchange="toggleMobile('${e.empId}', this.checked)" ${e.isMobile ? 'checked' : ''}></td>
             <td class="p-2">
@@ -701,6 +723,8 @@ async function saveWorker() {
     const lng = document.getElementById('w-lng').value;
     const radius = document.getElementById('w-rad').value;
     const isMobile = document.getElementById('w-mob').checked;
+    const fSel = document.getElementById('w-foreman');
+    const foremanId = fSel ? fSel.value : null;
     const address = document.getElementById('w-addr').value;
     
     const smS = document.getElementById('w-sh-m-s').value;
@@ -721,7 +745,7 @@ async function saveWorker() {
     
     const res = await fetch(url, {
         method, headers: authHeaders(),
-        body: JSON.stringify({empId, empName, lat, lng, radius, isMobile, address, smS, smE, seS, seE, snS, snE})
+        body: JSON.stringify({empId, empName, lat, lng, radius, isMobile, foremanId, address, smS, smE, seS, seE, snS, snE})
     });
     const r = await res.json();
     if(r.success) {
@@ -737,12 +761,14 @@ function editWorker(empId) {
     if(!w) return;
     editingWorkerId = empId;
     document.getElementById('w-id').value = w.empId;
-    document.getElementById('w-id').disabled = true; // Can't change ID easily
+    document.getElementById('w-id').disabled = true;
     document.getElementById('w-name').value = w.empName;
     document.getElementById('w-lat').value = w.lat;
     document.getElementById('w-lng').value = w.lng;
     document.getElementById('w-rad').value = w.radius;
     document.getElementById('w-mob').checked = w.isMobile;
+    const fSel = document.getElementById('w-foreman');
+    if(fSel) fSel.value = w.foremanId || "";
     document.getElementById('w-addr').value = w.address || "";
     
     document.getElementById('w-sh-m-s').value = w.shiftMorningStart || "";
@@ -813,6 +839,10 @@ async function renderClientShifts() {
                 <input type="time" id="sh-n-s" value="${s.shiftNightStart}" class="border p-1 rounded w-full mb-1 text-center font-mono text-sm">
                 <input type="time" id="sh-n-e" value="${s.shiftNightEnd}" class="border p-1 rounded w-full text-center font-mono text-sm">
             </div>
+        </div>
+        <div class="mt-2 mb-4 flex items-center">
+            <input type="checkbox" id="auto-lunch" class="mr-2 w-4 h-4" ${s.autoDeductLunch ? 'checked' : ''}>
+            <label for="auto-lunch" class="text-sm font-bold text-gray-700">Авто-вычет обеда (30 мин если смена > 6 часов)</label>
         </div>
         <button onclick="saveClientSettings()" class="bg-blue-600 text-white px-4 py-2 rounded" data-i18n="save"></button>
     </div>
@@ -935,6 +965,7 @@ async function updateScheduleMulti(geofenceId, dayOfWeek) {
 }
 
 async function saveClientSettings() {
+    const autoLunchEl = document.getElementById('auto-lunch');
     const payload = {
         shiftMorningStart: document.getElementById('sh-m-s').value,
         shiftMorningEnd: document.getElementById('sh-m-e').value,
@@ -942,6 +973,7 @@ async function saveClientSettings() {
         shiftEveningEnd: document.getElementById('sh-e-e').value,
         shiftNightStart: document.getElementById('sh-n-s').value,
         shiftNightEnd: document.getElementById('sh-n-e').value,
+        autoDeductLunch: autoLunchEl ? autoLunchEl.checked : false
     };
     const res = await fetch(`${API_URL}/client/settings`, {
         method: 'POST', headers: authHeaders(), body: JSON.stringify(payload)
@@ -1200,4 +1232,194 @@ window.addManualShift = async function() {
     } catch(e) {
         showToast("Ошибка сети");
     }
+}
+
+async function renderOwnerHierarchy() {
+    const res = await fetch(`${API_URL}/admin/clients`, { headers: authHeaders() });
+    const r = await res.json();
+    if(!r.success) return logout();
+    
+    let html = `
+    <h2 class="text-xl font-bold mb-4" data-i18n="tab_owner_hierarchy">Иерархия</h2>
+    <div class="bg-white p-6 rounded shadow border max-w-4xl">
+        <h3 class="font-bold mb-4">Структура клиентов</h3>
+        <div class="space-y-4">
+    `;
+    r.clients.forEach(c => {
+        html += `
+        <div class="p-4 border rounded bg-gray-50">
+            <h4 class="font-bold text-lg text-blue-700">${c.name} (Логин: ${c.username})</h4>
+            <div class="ml-4 mt-2 grid grid-cols-2 gap-4 text-sm">
+                <div class="bg-white p-3 rounded shadow-sm border border-l-4 border-l-purple-500">
+                    <div class="text-gray-500 font-bold">Бригадиры</div>
+                    <div class="text-2xl font-mono">${c._count.foremen}</div>
+                </div>
+                <div class="bg-white p-3 rounded shadow-sm border border-l-4 border-l-blue-500">
+                    <div class="text-gray-500 font-bold">Работники</div>
+                    <div class="text-2xl font-mono">${c._count.geofences}</div>
+                </div>
+            </div>
+        </div>`;
+    });
+    html += `</div></div>`;
+    document.getElementById('view-content').innerHTML = html;
+}
+
+async function renderClientForemen() {
+    const res = await fetch(`${API_URL}/client/foremen`, { headers: authHeaders() });
+    const r = await res.json();
+    
+    let html = `
+    <h2 class="text-xl font-bold mb-4" data-i18n="tab_client_foremen">Бригадиры</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="bg-white p-6 rounded shadow border">
+            <h3 class="font-bold mb-4">Создать бригадира</h3>
+            <input type="text" id="f-name" placeholder="Имя" class="border p-2 rounded w-full mb-2">
+            <input type="text" id="f-user" placeholder="Логин" class="border p-2 rounded w-full mb-2">
+            <input type="text" id="f-pass" placeholder="Пароль" class="border p-2 rounded w-full mb-4">
+            <button onclick="saveForeman()" class="bg-blue-600 text-white px-4 py-2 rounded shadow w-full font-bold">Создать</button>
+        </div>
+        <div class="bg-white p-6 rounded shadow border">
+            <h3 class="font-bold mb-4">Список бригадиров</h3>
+            <table class="w-full text-sm text-left">
+                <thead class="text-xs text-gray-700 uppercase bg-gray-100">
+                    <tr><th>Имя</th><th>Логин</th><th>Пароль</th><th>Статус</th><th>Удалить</th></tr>
+                </thead>
+                <tbody>
+    `;
+    
+    r.foremen.forEach(f => {
+        html += `
+        <tr class="border-b">
+            <td class="p-2 font-bold">${f.name}</td>
+            <td class="p-2">${f.username}</td>
+            <td class="p-2">${f.password}</td>
+            <td class="p-2">
+                <button onclick="toggleForeman('${f.id}')" class="px-2 py-1 text-xs rounded text-white ${f.isActive ? 'bg-green-500' : 'bg-red-500'}">
+                    ${f.isActive ? 'Активен' : 'Заблокирован'}
+                </button>
+            </td>
+            <td class="p-2"><button onclick="deleteForeman('${f.id}')" class="text-red-500 font-bold hover:underline">Удалить</button></td>
+        </tr>`;
+    });
+    
+    html += `</tbody></table></div></div>`;
+    document.getElementById('view-content').innerHTML = html;
+}
+
+async function saveForeman() {
+    const name = document.getElementById('f-name').value;
+    const username = document.getElementById('f-user').value;
+    const password = document.getElementById('f-pass').value;
+    if(!name || !username || !password) return showToast("Заполните все поля");
+    
+    const res = await fetch(`${API_URL}/client/foremen`, {
+        method: 'POST', headers: authHeaders(), body: JSON.stringify({name, username, password})
+    });
+    const r = await res.json();
+    if (r.success) renderClientForemen();
+    else showToast(r.error);
+}
+
+async function toggleForeman(id) {
+    const res = await fetch(`${API_URL}/client/foremen/${id}/toggle`, { method: 'POST', headers: authHeaders() });
+    if((await res.json()).success) renderClientForemen();
+}
+
+async function deleteForeman(id) {
+    if(!confirm("Удалить бригадира?")) return;
+    const res = await fetch(`${API_URL}/client/foremen/${id}`, { method: 'DELETE', headers: authHeaders() });
+    if((await res.json()).success) renderClientForemen();
+}
+
+async function renderClientAnalytics() {
+    document.getElementById('view-content').innerHTML = `
+    <h2 class="text-xl font-bold mb-4" data-i18n="tab_client_analytics">Аналитика</h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div class="bg-white p-4 rounded shadow border border-l-4 border-l-blue-500">
+            <div class="text-xs text-gray-500 font-bold uppercase mb-1">Всего часов (30 дней)</div>
+            <div id="stat-total" class="text-2xl font-black text-gray-800">...</div>
+        </div>
+        <div class="bg-white p-4 rounded shadow border border-l-4 border-l-indigo-500">
+            <div class="text-xs text-gray-500 font-bold uppercase mb-1">Сотрудников онлайн</div>
+            <div id="stat-online" class="text-2xl font-black text-gray-800">...</div>
+        </div>
+        <div class="bg-white p-4 rounded shadow border border-l-4 border-l-green-500">
+            <div class="text-xs text-gray-500 font-bold uppercase mb-1">Всего смен</div>
+            <div id="stat-shifts" class="text-2xl font-black text-gray-800">...</div>
+        </div>
+    </div>
+    <div class="bg-white p-6 rounded shadow border mb-6">
+        <h3 class="font-bold mb-4">График отработанных часов (последние 30 дней)</h3>
+        <canvas id="analyticsChart" height="100"></canvas>
+    </div>
+    `;
+    translatePage();
+    
+    // Fetch last 30 days data
+    const end = new Date();
+    const start = new Date();
+    start.setDate(end.getDate() - 30);
+    const startStr = start.toISOString().split('T')[0];
+    const endStr = end.toISOString().split('T')[0];
+    
+    const [hRes, eRes] = await Promise.all([
+        fetch(`${API_URL}/client/hours?startDate=${startStr}&endDate=${endStr}`, { headers: authHeaders() }),
+        fetch(`${API_URL}/client/employees`, { headers: authHeaders() })
+    ]);
+    
+    const hData = await hRes.json();
+    const eData = await eRes.json();
+    
+    if(!hData.success || !eData.success) return;
+    
+    const onlineCount = eData.employees.filter(e => e.isOnline).length;
+    document.getElementById('stat-online').textContent = onlineCount;
+    
+    // Process hours
+    const dailyTotals = {};
+    let sumTotal = 0;
+    let sumShifts = 0;
+    
+    for(let d = new Date(start); d <= end; d.setDate(d.getDate()+1)) {
+        dailyTotals[d.toISOString().split('T')[0]] = 0;
+    }
+    
+    for (let empId in hData.data) {
+        for (let date in hData.data[empId]) {
+            const h = hData.data[empId][date].totalHours || 0;
+            if (dailyTotals[date] !== undefined) dailyTotals[date] += h;
+            sumTotal += h;
+            sumShifts += hData.data[empId][date].shifts.length;
+        }
+    }
+    
+    document.getElementById('stat-total').textContent = sumTotal.toFixed(1);
+    document.getElementById('stat-shifts').textContent = sumShifts;
+    
+    const ctx = document.getElementById('analyticsChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: Object.keys(dailyTotals).map(d => d.split('-').slice(1).join('.')),
+            datasets: [{
+                label: 'Часов отработано',
+                data: Object.values(dailyTotals),
+                borderColor: '#3b82f6',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                borderWidth: 3,
+                pointBackgroundColor: '#2563eb',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: { 
+                y: { beginAtZero: true, grid: { color: '#f3f4f6' } },
+                x: { grid: { display: false } }
+            }
+        }
+    });
 }

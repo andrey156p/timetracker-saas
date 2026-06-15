@@ -451,7 +451,10 @@ app.get('/api/client/employees', authClient, async (req, res) => {
     let where = { clientId: req.user.clientId };
     if (req.user.role === 'foreman') where.foremanId = req.user.foremanId;
     
-    let employees = await prisma.geofence.findMany({ where });
+    let employees = await prisma.geofence.findMany({ 
+        where,
+        include: { foreman: true }
+    });
     
     // Check if they are online
     for (let emp of employees) {

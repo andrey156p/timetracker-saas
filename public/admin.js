@@ -561,6 +561,19 @@ async function renderClientWorkers() {
     const res = await fetch(`${API_URL}/client/employees`, { headers: authHeaders() });
     const r = await res.json();
     currentWorkersData = r.employees;
+
+    let foremenOptions = `<option value="">-- Без бригадира --</option>`;
+    if (userRole === 'client') {
+        try {
+            const fres = await fetch(`${API_URL}/client/foremen`, { headers: authHeaders() });
+            const fr = await fres.json();
+            if (fr.success && fr.foremen) {
+                fr.foremen.forEach(f => {
+                    foremenOptions += `<option value="${f.id}">${f.name}</option>`;
+                });
+            }
+        } catch(e) {}
+    }
     
     let html = `
     <div class="bg-white p-4 rounded shadow mb-6 border">
@@ -576,7 +589,7 @@ async function renderClientWorkers() {
             <div><label class="text-xs text-gray-500" data-i18n="address"></label><input id="w-addr" class="border p-1 rounded w-64 bg-gray-50" readonly></div>
             <div><label class="text-xs text-gray-500" data-i18n="rad"></label><input id="w-rad" class="border p-1 rounded w-20" value="500"></div>
             <div class="flex items-center mb-1"><input type="checkbox" id="w-mob" class="mr-1"><label class="text-xs" data-i18n="mobile"></label></div>
-            ${userRole === 'client' ? `<div><label class="text-xs text-gray-500 block">Бригадир</label><select id="w-foreman" class="border p-1 rounded bg-white" style="max-width: 150px;"></select></div>` : ''}
+            ${userRole === 'client' ? `<div><label class="text-xs text-gray-500 block">Бригадир</label><select id="w-foreman" class="border p-1 rounded bg-white" style="max-width: 150px;">${foremenOptions}</select></div>` : ''}
             <button onclick="saveWorker()" id="btn-save-worker" class="bg-blue-600 text-white px-3 py-1 rounded" data-i18n="save"></button>
             <button onclick="cancelEditWorker()" id="btn-cancel-worker" class="hidden bg-gray-400 text-white px-3 py-1 rounded" data-i18n="cancel"></button>
         </div>
@@ -633,10 +646,17 @@ async function renderClientWorkers() {
         if (seS) shiftStr += `В:${seS}-${seE} `;
         if (snS) shiftStr += `Н:${snS}-${snE} `;
         const shiftHtml = hasShifts ? `<div class="text-[10px] text-green-700 font-bold bg-green-100 border border-green-200 rounded px-1.5 py-0.5 inline-block mt-1">Особые смены: ${shiftStr.trim()}</div>` : '';
+        const foremanBadge = (userRole === 'client' && e.foreman) ? `<div class="text-[10px] text-purple-700 font-bold bg-purple-100 border border-purple-200 rounded px-1.5 py-0.5 inline-block mt-1">Бригадир: ${e.foreman.name}</div>` : '';
         const onlineDot = e.isOnline ? `<span class="inline-block w-2.5 h-2.5 bg-green-500 rounded-full ml-1" title="Онлайн (на смене)"></span>` : '';
         html += `<tr class="border-b hover:bg-gray-50">
             <td class="p-2">${e.empId}</td>
-            <td class="p-2 font-medium flex items-center">${e.empName} ${onlineDot} ${shiftHtml}</td>
+            <td class="p-2 font-medium">
+                <div class="flex items-center">${e.empName} ${onlineDot}</div>
+                <div class="flex flex-col items-start gap-1">
+                    ${shiftHtml}
+                    ${foremanBadge}
+                </div>
+            </td>
             <td class="p-2 text-xs text-gray-500">${e.address ? e.address : e.lat + ', ' + e.lng} <br><span class="text-[10px] text-gray-400">R: ${e.radius}m</span></td>
             <td class="p-2"><input type="checkbox" onchange="toggleMobile('${e.empId}', this.checked)" ${e.isMobile ? 'checked' : ''}></td>
             <td class="p-2">

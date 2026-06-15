@@ -10,10 +10,6 @@
     {
       "path": "/api/cron/billing?secret=fallback_secret_123",
       "schedule": "0 0 1 * *"
-    },
-    {
-      "path": "/api/cron/push",
-      "schedule": "* * * * *"
     }
   ]
 }

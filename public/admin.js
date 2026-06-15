@@ -589,7 +589,7 @@ async function renderClientWorkers() {
             <div><label class="text-xs text-gray-500" data-i18n="address"></label><input id="w-addr" class="border p-1 rounded w-64 bg-gray-50" readonly></div>
             <div><label class="text-xs text-gray-500" data-i18n="rad"></label><input id="w-rad" class="border p-1 rounded w-20" value="500"></div>
             <div class="flex items-center mb-1"><input type="checkbox" id="w-mob" class="mr-1"><label class="text-xs" data-i18n="mobile"></label></div>
-            ${userRole === 'client' ? `<div><label class="text-xs text-gray-500 block">Бригадир</label><select id="w-foreman" class="border p-1 rounded bg-white" style="max-width: 150px;">${foremenOptions}</select></div>` : ''}
+            ${userRole === 'client' ? `<div><label class="text-xs text-gray-500 block">Бригадир</label><select id="w-foreman" class="border p-1.5 rounded bg-white text-sm" style="min-width: 160px;">${foremenOptions}</select></div>` : ''}
             <button onclick="saveWorker()" id="btn-save-worker" class="bg-blue-600 text-white px-3 py-1 rounded" data-i18n="save"></button>
             <button onclick="cancelEditWorker()" id="btn-cancel-worker" class="hidden bg-gray-400 text-white px-3 py-1 rounded" data-i18n="cancel"></button>
         </div>
@@ -1291,21 +1291,22 @@ async function renderClientForemen() {
     
     let html = `
     <h2 class="text-xl font-bold mb-4" data-i18n="tab_client_foremen">Бригадиры</h2>
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div class="bg-white p-6 rounded shadow border">
-            <h3 class="font-bold mb-4">Создать бригадира</h3>
-            <input type="text" id="f-name" placeholder="Имя" class="border p-2 rounded w-full mb-2">
-            <input type="text" id="f-user" placeholder="Логин" class="border p-2 rounded w-full mb-2">
-            <input type="text" id="f-pass" placeholder="Пароль" class="border p-2 rounded w-full mb-4">
-            <button onclick="saveForeman()" class="bg-blue-600 text-white px-4 py-2 rounded shadow w-full font-bold">Создать</button>
-        </div>
-        <div class="bg-white p-6 rounded shadow border">
-            <h3 class="font-bold mb-4">Список бригадиров</h3>
-            <table class="w-full text-sm text-left">
-                <thead class="text-xs text-gray-700 uppercase bg-gray-100">
-                    <tr><th>Имя</th><th>Логин</th><th>Пароль</th><th>Статус</th><th>Удалить</th></tr>
-                </thead>
-                <tbody>
+    
+    <div class="bg-white p-6 rounded shadow border mb-6 max-w-lg">
+        <h3 class="font-bold mb-4">Создать бригадира</h3>
+        <input type="text" id="f-name" placeholder="Имя" class="border p-2 rounded w-full mb-2">
+        <input type="text" id="f-user" placeholder="Логин" class="border p-2 rounded w-full mb-2">
+        <input type="text" id="f-pass" placeholder="Пароль" class="border p-2 rounded w-full mb-4">
+        <button onclick="saveForeman()" class="bg-blue-600 text-white px-4 py-2 rounded shadow w-full font-bold">Создать</button>
+    </div>
+
+    <div class="bg-white p-6 rounded shadow border">
+        <h3 class="font-bold mb-4">Список бригадиров</h3>
+        <table class="w-full text-sm text-left">
+            <thead class="text-xs text-gray-700 uppercase bg-gray-100">
+                <tr><th class="p-2">Имя</th><th class="p-2">Логин</th><th class="p-2">Пароль</th><th class="p-2">Статус</th><th class="p-2">Удалить</th></tr>
+            </thead>
+            <tbody>
     `;
     
     r.foremen.forEach(f => {

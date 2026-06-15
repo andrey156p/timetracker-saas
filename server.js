@@ -75,23 +75,23 @@ app.post('/api/auth/login', async (req, res) => {
     const OWNER_PASSWORD = await getOwnerPassword();
     if (username === 'owner' && password === OWNER_PASSWORD) {
         const token = jwt.sign({ role: 'owner' }, JWT_SECRET, { expiresIn: '7d' });
-        return res.json({ success: true, role: 'owner', token });
+        return res.json({ success: true, role: 'owner', token, name: 'Владелец' });
     }
 
     // Check Client (Manager)
     const client = await prisma.client.findUnique({ where: { username } });
     if (client && client.password === password) {
-        if (!client.isActive) return res.status(403).json({ success: false, error: 'Ваш аккаунт заблокирован за неуплату' });
+        if (!client.isActive) return res.status(403).json({ success: false, error: 'Ваш аккаунт отключен владельцем' });
         const token = jwt.sign({ role: 'client', clientId: client.id }, JWT_SECRET, { expiresIn: '7d' });
-        return res.json({ success: true, role: 'client', token, clientId: client.id });
+        return res.json({ success: true, role: 'client', token, clientId: client.id, name: client.name });
     }
 
     // Check Foreman
     const foreman = await prisma.foreman.findUnique({ where: { username } });
     if (foreman && foreman.password === password) {
-        if (!foreman.isActive) return res.status(403).json({ success: false, error: 'Ваш аккаунт заблокирован' });
+        if (!foreman.isActive) return res.status(403).json({ success: false, error: 'Ваш аккаунт отключен' });
         const token = jwt.sign({ role: 'foreman', clientId: foreman.clientId, foremanId: foreman.id }, JWT_SECRET, { expiresIn: '7d' });
-        return res.json({ success: true, role: 'foreman', token, clientId: foreman.clientId, foremanId: foreman.id });
+        return res.json({ success: true, role: 'foreman', token, clientId: foreman.clientId, foremanId: foreman.id, name: foreman.name });
     }
 
     res.status(401).json({ success: false, error: 'Неверные учетные данные' });

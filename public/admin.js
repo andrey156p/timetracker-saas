@@ -175,6 +175,7 @@ async function login() {
             localStorage.setItem('token', authToken);
             localStorage.setItem('role', userRole);
             if (clientId) localStorage.setItem('clientId', clientId);
+            if (r.name) localStorage.setItem('userName', r.name);
             
             document.getElementById('login-pass').value = '';
             initApp();
@@ -202,6 +203,18 @@ function initApp() {
     
     translatePage();
     renderTabs();
+
+    const userName = localStorage.getItem('userName');
+    const nameDisplay = document.getElementById('user-info-display');
+    if (nameDisplay) {
+        if (userName) {
+            const roleName = userRole === 'owner' ? 'Владелец' : (userRole === 'foreman' ? 'Бригадир' : 'Руководитель');
+            nameDisplay.textContent = `${roleName}: ${userName}`;
+        } else {
+            nameDisplay.textContent = '';
+        }
+    }
+
     let tabs = clientTabs;
     if (userRole === 'owner') tabs = ownerTabs;
     else if (userRole === 'foreman') tabs = foremanTabs;

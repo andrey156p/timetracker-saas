@@ -945,24 +945,27 @@ async function openNotesModal(empId) {
                     <textarea id="swal-note-text" class="border p-2 rounded h-24" placeholder="Был вызван на другой объект..."></textarea>
                 </label>
             </div>
-            <script>
-                document.getElementById('swal-note-date').addEventListener('change', async (e) => {
-                    const date = e.target.value;
-                    const res = await fetch(\`${API_URL}/client/notes?date=${date}\`, { headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') } });
-                    const r = await res.json();
-                    if (r.success) {
-                        const note = r.notes.find(n => n.empId === '${empId}');
-                        document.getElementById('swal-note-text').value = note ? note.noteText : '';
-                    }
-                });
-                // Trigger change to load initial
-                document.getElementById('swal-note-date').dispatchEvent(new Event('change'));
-            </script>
-        `,
+            `,
         focusConfirm: false,
         showCancelButton: true,
         confirmButtonText: 'Сохранить',
         cancelButtonText: 'Отмена',
+        didOpen: () => {
+            const dateInput = document.getElementById('swal-note-date');
+            const textInput = document.getElementById('swal-note-text');
+            dateInput.addEventListener('change', async (e) => {
+                const date = e.target.value;
+                try {
+                    const res = await fetch(`${API_URL}/client/notes?date=${date}`, { headers: authHeaders() });
+                    const r = await res.json();
+                    if (r.success) {
+                        const note = r.notes.find(n => n.empId === empId);
+                        textInput.value = note ? note.noteText : '';
+                    }
+                } catch(err) { console.error(err); }
+            });
+            dateInput.dispatchEvent(new Event('change'));
+        },
         preConfirm: () => {
             return {
                 date: document.getElementById('swal-note-date').value,
@@ -1716,7 +1719,7 @@ async function generatePDFReport() {
                     r.nightHours || '0',
                     r.saturdayHours || '0',
                     r.totalHours || '0',
-                    r.totalHours || '0'
+                    r.notes || ''
                 ]);
 
                 sumLunch += parseFloat(r.lunchDeduction || 0);

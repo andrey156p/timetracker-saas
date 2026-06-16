@@ -66,8 +66,23 @@ function requireClientRole(req, res, next) {
 }
 
 // ==========================================
-// AUTHENTICATION
+// AUTHENTICATION & REGISTRATION
 // ==========================================
+app.post('/api/public/register', async (req, res) => {
+    try {
+        const { username, password, name } = req.body;
+        if (!username || !password || !name) return res.status(400).json({ success: false, error: 'Fill all fields' });
+        
+        const trialEndsAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+        const client = await prisma.client.create({ 
+            data: { username, password, name, trialEndsAt } 
+        });
+        res.json({ success: true });
+    } catch (e) { 
+        res.status(400).json({ success: false, error: 'Логин уже существует' }); 
+    }
+});
+
 app.post('/api/auth/login', async (req, res) => {
     const { username, password } = req.body;
     
@@ -82,6 +97,11 @@ app.post('/api/auth/login', async (req, res) => {
     const client = await prisma.client.findUnique({ where: { username } });
     if (client && client.password === password) {
         if (!client.isActive) return res.status(403).json({ success: false, error: 'Ваш аккаунт отключен владельцем' });
+        
+        if (client.trialEndsAt && new Date() > client.trialEndsAt) {
+            return res.status(403).json({ success: false, error: 'Ваш 14-дневный пробный период истек. Пожалуйста, свяжитесь с нами для оплаты подписки.' });
+        }
+
         const token = jwt.sign({ role: 'client', clientId: client.id }, JWT_SECRET, { expiresIn: '7d' });
         return res.json({ success: true, role: 'client', token, clientId: client.id, name: client.name });
     }
@@ -166,6 +186,12 @@ app.post('/api/admin/clients/:id/reset', authOwner, async (req, res) => {
     const { id } = req.params;
     const { newPassword } = req.body;
     await prisma.client.update({ where: { id }, data: { password: newPassword } });
+    res.json({ success: true });
+});
+
+app.post('/api/admin/clients/:id/unlock', authOwner, async (req, res) => {
+    const { id } = req.params;
+    await prisma.client.update({ where: { id }, data: { trialEndsAt: null, isActive: true } });
     res.json({ success: true });
 });
 

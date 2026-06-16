@@ -295,18 +295,25 @@ async function renderOwnerClients() {
             <th class="p-2" data-i18n="foreman_name"></th>
             <th class="p-2" data-i18n="foreman_login"></th>
             <th class="p-2" data-i18n="active"></th>
+            <th class="p-2">Trial</th>
             <th class="p-2" data-i18n="action"></th>
         </tr></thead>
         <tbody>
     `;
     r.clients.forEach(c => {
         let currentTariffStr = c.tariffMode === 'per_hour' ? `${i18n[currentLang].per_hour} (${c.pricePerHour} ₪)` : `${i18n[currentLang].per_worker} (${c.pricePerUser} ₪)`;
+        let trialStr = c.trialEndsAt ? new Date(c.trialEndsAt).toLocaleDateString() : 'Бессрочный';
+        if (c.trialEndsAt && new Date() > new Date(c.trialEndsAt)) {
+            trialStr = `<span class="text-red-500 font-bold">Истек</span>`;
+        }
         html += `<tr class="border-b hover:bg-gray-50">
             <td class="p-2">${c.name}</td>
             <td class="p-2">${c.username}</td>
             <td class="p-2">${c.isActive ? '✅' : '❌'}</td>
+            <td class="p-2 text-sm">${trialStr}</td>
             <td class="p-2">
                 <button onclick="toggleForeman('${c.id}')" class="text-blue-600 underline text-xs mr-2">${c.isActive ? i18n[currentLang].block_btn : i18n[currentLang].unblock_btn}</button>
+                <button onclick="unlockTrial('${c.id}')" class="text-green-600 underline text-xs mr-2" ${!c.trialEndsAt ? 'hidden' : ''}>Unlock Trial</button>
                 <button onclick="resetForemanPass('${c.id}')" class="text-orange-600 underline text-xs mr-2">${i18n[currentLang].reset_pass}</button>
                 <button onclick="openTariffModal('${c.id}', '${c.tariffMode}', ${c.pricePerUser}, ${c.pricePerHour})" class="text-green-600 underline text-xs mr-2">${i18n[currentLang].tariff}</button>
                 <button onclick="deleteForeman('${c.id}')" class="text-red-600 underline text-xs mr-2" data-i18n="delete"></button>
@@ -333,6 +340,12 @@ async function createForeman() {
 
 async function toggleForeman(id) {
     const res = await fetch(`${API_URL}/admin/clients/${id}/toggle`, { method: 'POST', headers: authHeaders() });
+    if((await res.json()).success) loadTab('owner-clients');
+}
+
+async function unlockTrial(id) {
+    if (!confirm('Отменить триал и сделать аккаунт бессрочным? / Remove trial limit?')) return;
+    const res = await fetch(`${API_URL}/admin/clients/${id}/unlock`, { method: 'POST', headers: authHeaders() });
     if((await res.json()).success) loadTab('owner-clients');
 }
 
@@ -724,6 +737,7 @@ async function renderClientWorkers() {
                 <input type="month" id="pdf-month" value="${currentMonth}" class="border p-2 rounded w-40 text-sm">
             </div>
             <button onclick="generatePDFReport()" id="btn-generate-pdf" class="bg-blue-600 text-white px-4 py-2 rounded shadow font-bold text-sm hover:bg-blue-700 transition">Download PDF</button>
+             <button onclick="generateCSVReport()" id="btn-generate-csv" class="bg-green-600 text-white px-4 py-2 rounded shadow font-bold text-sm hover:bg-green-700 transition">Download CSV</button>
         </div>
     </div>
 
@@ -1760,6 +1774,129 @@ async function generatePDFReport() {
 
             doc.save(`Timesheet_${empId}_${month}.pdf`);
         }
+
+    } catch(e) {
+        Swal.fire('Error', e.message, 'error');
+    }
+
+    btn.textContent = originalText;
+    btn.disabled = false;
+}
+
+
+async function generateCSVReport() {
+    const workerId = document.getElementById('pdf-worker-id').value;
+    const month = document.getElementById('pdf-month').value;
+    if (!month) return Swal.fire('Error', 'Please select a month', 'error');
+
+    const [yearStr, monthStr] = month.split('-');
+    const year = parseInt(yearStr);
+    const m = parseInt(monthStr) - 1;
+
+    const startDate = new Date(year, m, 1);
+    const endDate = new Date(year, m + 1, 0, 23, 59, 59, 999);
+    
+    const startStr = new Date(startDate.getTime() - startDate.getTimezoneOffset() * 60000).toISOString();
+    const endStr = new Date(endDate.getTime() - endDate.getTimezoneOffset() * 60000).toISOString();
+
+    const btn = document.getElementById('btn-generate-csv');
+    const originalText = btn.textContent;
+    btn.textContent = 'Generating...';
+    btn.disabled = true;
+
+    try {
+        const res = await fetch(`${API_URL}/client/hours?startDate=${startStr}&endDate=${endStr}`, { headers: authHeaders() });
+        const r = await res.json();
+        
+        if (!r.success) throw new Error(r.error);
+
+        let reportData = r.report;
+        if (workerId !== 'ALL') {
+            reportData = reportData.filter(x => x.empId === workerId);
+        }
+
+        if (reportData.length === 0) {
+            Swal.fire('Info', 'No data found for the selected period.', 'info');
+            btn.textContent = originalText;
+            btn.disabled = false;
+            return;
+        }
+
+        // Group by empId
+        const workers = {};
+        reportData.forEach(row => {
+            if (!workers[row.empId]) {
+                workers[row.empId] = { name: row.name, rows: [] };
+            }
+            workers[row.empId].rows.push(row);
+        });
+
+        // Hebrew Headers
+        const BOM = "\uFEFF";
+        let csvContent = BOM + "תאריך,יום,כניסה,יציאה,ניכוי הפסקה,שעות נוספות,שעות לילה,שעות שבת,סה״כ שעות,הערות\n";
+
+        for (const [empId, data] of Object.entries(workers)) {
+            // Employee info header
+            csvContent += `עובד: ${data.name} (ID: ${empId})\n`;
+            
+            let sumTotal = 0, sumOvertime = 0, sumNight = 0, sumSat = 0, sumLunch = 0;
+
+            data.rows.forEach(r => {
+                const dDate = new Date(r.date);
+                const days = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+                const dayName = days[dDate.getDay()];
+                
+                let startTimes = [], endTimes = [];
+                if (r.times) {
+                    const shifts = r.times.split(', ');
+                    shifts.forEach(s => {
+                        const parts = s.split(' - ');
+                        if (parts.length === 2) {
+                            startTimes.push(parts[0].replace('*', ''));
+                            endTimes.push(parts[1].replace('*', ''));
+                        }
+                    });
+                }
+
+                // escape quotes and format
+                const escapeCsv = str => `"${String(str).replace(/"/g, '""')}"`;
+
+                csvContent += [
+                    r.date,
+                    dayName,
+                    escapeCsv(startTimes.join(', ') || '-'),
+                    escapeCsv(endTimes.join(', ') || '-'),
+                    r.lunchDeduction || '0',
+                    r.overtimeHours || '0',
+                    r.nightHours || '0',
+                    r.saturdayHours || '0',
+                    r.totalHours || '0',
+                    escapeCsv(r.notes || '')
+                ].join(',') + "\n";
+
+                sumLunch += parseFloat(r.lunchDeduction || 0);
+                sumOvertime += parseFloat(r.overtimeHours || 0);
+                sumNight += parseFloat(r.nightHours || 0);
+                sumSat += parseFloat(r.saturdayHours || 0);
+                sumTotal += parseFloat(r.totalHours || 0);
+            });
+
+            const grossTotal = sumTotal + sumLunch;
+            csvContent += `סה״כ שעות (ברוטו),${grossTotal.toFixed(2)}\n`;
+            csvContent += `סה״כ לאחר ניכוי,${sumTotal.toFixed(2)}\n`;
+            csvContent += `סה״כ שעות נוספות,${sumOvertime.toFixed(2)}\n`;
+            csvContent += `סה״כ שעות לילה,${sumNight.toFixed(2)}\n`;
+            csvContent += `סה״כ שעות שבת,${sumSat.toFixed(2)}\n\n`;
+        }
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Timesheet_${workerId}_${month}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
 
     } catch(e) {
         Swal.fire('Error', e.message, 'error');

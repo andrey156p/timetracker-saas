@@ -479,7 +479,8 @@ app.get('/api/client/employees', authClient, async (req, res) => {
     
     let employees = await prisma.geofence.findMany({ 
         where,
-        include: { foreman: true }
+        include: { foreman: true },
+        orderBy: { id: 'asc' }
     });
     
     // Check if they are online

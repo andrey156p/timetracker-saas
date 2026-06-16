@@ -768,7 +768,7 @@ async function renderClientWorkers() {
         html += `<tr class="border-b hover:bg-gray-50">
             <td class="p-2">${e.empId}</td>
             <td class="p-2 font-medium">
-                <div class="flex items-center">${e.empName} ${onlineDot}</div>
+                <div class="flex items-center">${e.empName} ${e.strictGps ? ' 📍' : ''} ${onlineDot}</div>
                 <div class="flex flex-col items-start gap-1">
                     ${shiftHtml}
                     ${foremanBadge}
@@ -1658,48 +1658,66 @@ async function generatePDFReport() {
     const workerId = document.getElementById('pdf-worker-id').value;
     const month = document.getElementById('pdf-month').value;
     if (!month) return Swal.fire('Error', 'Please select a month', 'error');
-    if (!workerId) return Swal.fire('Error', 'Please select a worker', 'error');
 
-    const btn = document.getElementById('btn-download-pdf');
+    const [yearStr, monthStr] = month.split('-');
+    const year = parseInt(yearStr);
+    const m = parseInt(monthStr) - 1;
+
+    const startDate = new Date(year, m, 1);
+    const endDate = new Date(year, m + 1, 0, 23, 59, 59, 999);
+    
+    // adjust to timezone offset to avoid JS date shifting when sending to server
+    const startStr = new Date(startDate.getTime() - startDate.getTimezoneOffset() * 60000).toISOString();
+    const endStr = new Date(endDate.getTime() - endDate.getTimezoneOffset() * 60000).toISOString();
+
+    const btn = document.getElementById('btn-generate-pdf');
     const originalText = btn.textContent;
     btn.textContent = 'Generating...';
     btn.disabled = true;
 
     try {
-        const response = await fetch(`${API_URL}/owner/reports?month=${month}`);
-        if (!response.ok) throw new Error('Failed to fetch report data');
-        const r = await response.json();
+        const res = await fetch(`${API_URL}/client/hours?startDate=${startStr}&endDate=${endStr}`, { headers: authHeaders() });
+        const r = await res.json();
+        
+        if (!r.success) throw new Error(r.error);
 
-        const workers = {};
-        r.data.forEach(row => {
-            if (workerId !== 'all' && row.employeeId !== workerId) return;
-            if (!workers[row.employeeId]) workers[row.employeeId] = { name: row.employeeName, rows: [] };
-            workers[row.employeeId].rows.push(row);
-        });
+        let reportData = r.report;
+        if (workerId !== 'ALL') {
+            reportData = reportData.filter(x => x.empId === workerId);
+        }
 
-        if (Object.keys(workers).length === 0) {
-            Swal.fire('Info', 'No records found for this selection', 'info');
+        if (reportData.length === 0) {
+            Swal.fire('Info', 'No data found for the selected period.', 'info');
             btn.textContent = originalText;
             btn.disabled = false;
             return;
         }
 
+        // Group by empId
+        const workers = {};
+        reportData.forEach(row => {
+            if (!workers[row.empId]) {
+                workers[row.empId] = { name: row.name, rows: [] };
+            }
+            workers[row.empId].rows.push(row);
+        });
+
         const { jsPDF } = window.jspdf;
 
         for (const [empId, data] of Object.entries(workers)) {
             const doc = new jsPDF();
+            
+            // Header
             doc.setFontSize(18);
             doc.text('Monthly Timesheet Report', 14, 20);
-            
-            // Convert name to Latin
-            const englishName = transliterate(data.name);
-
             doc.setFontSize(12);
+            
+            const englishName = transliterate(data.name);
             doc.text(`Employee: ${englishName} (ID: ${empId})`, 14, 30);
             doc.text(`Month: ${month}`, 14, 38);
 
-            let sumTotal = 0, sumOvertime = 0, sumNight = 0, sumSat = 0, sumLunch = 0;
             const tableBody = [];
+            let sumTotal = 0, sumOvertime = 0, sumNight = 0, sumSat = 0, sumLunch = 0;
 
             data.rows.forEach(r => {
                 const dDate = new Date(r.date);
@@ -1750,6 +1768,7 @@ async function generatePDFReport() {
 
             let finalY = doc.lastAutoTable.finalY || 45;
             
+            // Totals
             const grossTotal = sumTotal + sumLunch;
             doc.setFontSize(11);
             doc.setFont(undefined, 'bold');
@@ -1760,6 +1779,7 @@ async function generatePDFReport() {
             doc.text(`Total Night Hours: ${sumNight.toFixed(2)}`, 14, finalY + 28);
             doc.text(`Total Saturday Hours: ${sumSat.toFixed(2)}`, 14, finalY + 34);
 
+            // Signature Area
             const managerName = r.clientName ? transliterate(r.clientName) : 'Manager';
             doc.text(`Manager: ${managerName}`, 14, finalY + 50);
             doc.text(`Date: ____________________`, 14, finalY + 60);
@@ -1772,8 +1792,10 @@ async function generatePDFReport() {
         Swal.fire('Error', e.message, 'error');
     }
 
-    btn.textContent = originalText;
-    btn.disabled = false;
+    if (btn) {
+        btn.textContent = originalText;
+        btn.disabled = false;
+    }
 }
 
 async function generateCSVReport() {

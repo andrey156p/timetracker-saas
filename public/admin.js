@@ -1645,170 +1645,110 @@ async function renderClientAnalytics() {
 
 async function generatePDFReport() {
     const isHe = currentLang === 'he';
-    const workerId = document.getElementById('pdf-worker-id').value;
-    const month = document.getElementById('pdf-month').value;
-    if (!month) return Swal.fire('Error', 'Please select a month', 'error');
+            const isRu = currentLang === 'ru';
 
-    const [yearStr, monthStr] = month.split('-');
-    const year = parseInt(yearStr);
-    const m = parseInt(monthStr) - 1;
+            const tTitle = isHe ? 'דוח שעות חודשי' : (isRu ? 'Месячный Отчет' : 'Monthly Timesheet Report');
+            const tEmp = isHe ? 'עובד' : (isRu ? 'Сотрудник' : 'Employee');
+            const tMonth = isHe ? 'חודש' : (isRu ? 'Месяц' : 'Month');
 
-    const startDate = new Date(year, m, 1);
-    const endDate = new Date(year, m + 1, 0, 23, 59, 59, 999);
-    
-    // adjust to timezone offset to avoid JS date shifting when sending to server
-    const startStr = new Date(startDate.getTime() - startDate.getTimezoneOffset() * 60000).toISOString();
-    const endStr = new Date(endDate.getTime() - endDate.getTimezoneOffset() * 60000).toISOString();
+            const tDate = isHe ? 'תאריך' : (isRu ? 'Дата' : 'Date');
+            const tDay = isHe ? 'יום' : (isRu ? 'День' : 'Day');
+            const tIn = isHe ? 'כניסה' : (isRu ? 'Вход' : 'In');
+            const tOut = isHe ? 'יציאה' : (isRu ? 'Выход' : 'Out');
+            const tLunch = isHe ? 'ניכוי הפסקה' : (isRu ? 'Обед' : 'Lunch Ded.');
+            const tOvertime = isHe ? 'שעות נוספות' : (isRu ? 'Переработка' : 'Overtime');
+            const tNight = isHe ? 'לילה' : (isRu ? 'Ночь' : 'Night');
+            const tSat = isHe ? 'שבת' : (isRu ? 'Суббота' : 'Saturday');
+            const tTotal = isHe ? 'סה"כ שעות' : (isRu ? 'Итого часов' : 'Total Hrs');
+            const tNotes = isHe ? 'הערות' : (isRu ? 'Заметки' : 'Notes');
 
-    const btn = document.getElementById('btn-generate-pdf');
-    const originalText = btn.textContent;
-    btn.textContent = 'Generating...';
-    btn.disabled = true;
+            const tGross = isHe ? 'סה"כ שעות (ברוטו)' : (isRu ? 'Всего часов (Брутто)' : 'Total Hours (Gross)');
+            const tAfterLunch = isHe ? 'סה"כ לאחר ניכוי הפסקה' : (isRu ? 'Итого после вычета обеда' : 'Total After Lunch Deduction');
+            const tTotalOvertime = isHe ? 'סה"כ שעות נוספות' : (isRu ? 'Итого сверхурочных' : 'Total Overtime');
+            const tTotalNight = isHe ? 'סה"כ שעות לילה' : (isRu ? 'Итого ночных часов' : 'Total Night Hours');
+            const tTotalSat = isHe ? 'סה"כ שעות שבת' : (isRu ? 'Итого субботних часов' : 'Total Saturday Hours');
 
-    try {
-        const res = await fetch(`${API_URL}/client/hours?startDate=${startStr}&endDate=${endStr}`, { headers: authHeaders() });
-        const r = await res.json();
-        
-        if (!r.success) throw new Error(r.error);
-
-        let reportData = r.report;
-        if (workerId !== 'ALL') {
-            reportData = reportData.filter(x => x.empId === workerId);
-        }
-
-        if (reportData.length === 0) {
-            Swal.fire('Info', 'No data found for the selected period.', 'info');
-            btn.textContent = originalText;
-            btn.disabled = false;
-            return;
-        }
-
-        // Group by empId
-        const workers = {};
-        reportData.forEach(row => {
-            if (!workers[row.empId]) {
-                workers[row.empId] = { name: row.name, rows: [] };
-            }
-            workers[row.empId].rows.push(row);
-        });
-
-        if (!window.html2pdf) {
-            await new Promise((resolve, reject) => {
-                const script = document.createElement('script');
-                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
-                script.onload = resolve;
-                script.onerror = reject;
-                document.head.appendChild(script);
-            });
-        }
-
-        for (const [empId, data] of Object.entries(workers)) {
-            let sumTotal = 0, sumOvertime = 0, sumNight = 0, sumSat = 0, sumLunch = 0;
-            
-            let trs = '';
-            data.rows.forEach(r => {
-                const dDate = new Date(r.date);
-                const days = isHe ? ['א\'', 'ב\'', 'ג\'', 'ד\'', 'ה\'', 'ו\'', 'שבת'] : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-                const dayName = days[dDate.getDay()];
-                
-                let startTimes = [], endTimes = [];
-                if (r.times) {
-                    const shifts = r.times.split(', ');
-                    shifts.forEach(s => {
-                        const parts = s.split(' - ');
-                        if (parts.length === 2) {
-                            startTimes.push(parts[0].replace('*', ''));
-                            endTimes.push(parts[1].replace('*', ''));
-                        }
-                    });
-                }
-
-                trs += `
-                    <tr>
-                        <td style="padding:6px; border:1px solid #ddd;">${r.date}</td>
-                        <td style="padding:6px; border:1px solid #ddd;">${dayName}</td>
-                        <td style="padding:6px; border:1px solid #ddd;">${startTimes.join('<br>') || '-'}</td>
-                        <td style="padding:6px; border:1px solid #ddd;">${endTimes.join('<br>') || '-'}</td>
-                        <td style="padding:6px; border:1px solid #ddd;">${r.lunchDeduction || '0'}</td>
-                        <td style="padding:6px; border:1px solid #ddd;">${r.overtimeHours || '0'}</td>
-                        <td style="padding:6px; border:1px solid #ddd;">${r.nightHours || '0'}</td>
-                        <td style="padding:6px; border:1px solid #ddd;">${r.saturdayHours || '0'}</td>
-                        <td style="padding:6px; border:1px solid #ddd; font-weight:bold;">${r.totalHours || '0'}</td>
-                        <td style="padding:6px; border:1px solid #ddd; max-width: 150px; word-wrap: break-word;">${r.notes || ''}</td>
-                    </tr>
-                `;
-
-                sumLunch += parseFloat(r.lunchDeduction || 0);
-                sumOvertime += parseFloat(r.overtimeHours || 0);
-                sumNight += parseFloat(r.nightHours || 0);
-                sumSat += parseFloat(r.saturdayHours || 0);
-                sumTotal += parseFloat(r.totalHours || 0);
-            });
+            const tManager = isHe ? 'מנהל' : (isRu ? 'Менеджер' : 'Manager');
+            const tSigDate = isHe ? 'תאריך' : (isRu ? 'Дата' : 'Date');
+            const tSignature = isHe ? 'חתימה' : (isRu ? 'Подпись' : 'Signature');
 
             const grossTotal = sumTotal + sumLunch;
-            const title = isHe ? 'דוח שעות חודשי' : (currentLang==='ru' ? 'Месячный Отчет' : 'Monthly Timesheet Report');
-            const managerName = r.clientName || 'Manager';
+            const managerName = r.clientName || tManager;
             
             const container = document.createElement('div');
+            // Force width to simulate an A4 page width at 96 DPI, ensuring consistent rendering
+            container.style.width = '800px'; 
             container.style.fontFamily = 'Helvetica, Arial, sans-serif';
             container.style.color = '#000';
-            container.style.width = '100%';
             container.style.backgroundColor = '#fff';
+            
+            // Set element box-sizing to prevent padding from expanding the width
+            container.style.boxSizing = 'border-box';
+            
             container.innerHTML = `
-                <div style="padding: 20px; direction: ${isHe ? 'rtl' : 'ltr'}; background: #fff;">
-                    <h2 style="color: #000; font-size: 18pt; margin: 0 0 10px 0;">${title}</h2>
-                    <div style="font-size: 12pt; margin-bottom: 15px; line-height: 1.4;">
-                        <div><strong>${isHe ? 'עובד' : 'Employee'}:</strong> ${data.name} (ID: ${empId})</div>
-                        <div><strong>${isHe ? 'חודש' : 'Month'}:</strong> ${month}</div>
+                <div style="padding: 30px; direction: ${isHe ? 'rtl' : 'ltr'}; background: #fff; width: 100%; box-sizing: border-box;">
+                    <h2 style="color: #000; font-size: 22px; margin: 0 0 15px 0;">${tTitle}</h2>
+                    <div style="font-size: 14px; margin-bottom: 20px; line-height: 1.5;">
+                        <div><strong>${tEmp}:</strong> ${data.name} (ID: ${empId})</div>
+                        <div><strong>${tMonth}:</strong> ${month}</div>
                     </div>
                     
-                    <table style="width: 100%; border-collapse: collapse; font-size: 8pt; margin-bottom: 20px;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 25px;">
                         <thead>
-                            <tr>
-                                <th style="background-color: #3b82f6; color: #ffffff; padding: 4px; border: 1px solid #e5e7eb; text-align: ${isHe?'right':'left'}; font-weight: bold;">${isHe ? 'תאריך' : 'Date'}</th>
-                                <th style="background-color: #3b82f6; color: #ffffff; padding: 4px; border: 1px solid #e5e7eb; text-align: ${isHe?'right':'left'}; font-weight: bold;">${isHe ? 'יום' : 'Day'}</th>
-                                <th style="background-color: #3b82f6; color: #ffffff; padding: 4px; border: 1px solid #e5e7eb; text-align: ${isHe?'right':'left'}; font-weight: bold;">${isHe ? 'כניסה' : 'In'}</th>
-                                <th style="background-color: #3b82f6; color: #ffffff; padding: 4px; border: 1px solid #e5e7eb; text-align: ${isHe?'right':'left'}; font-weight: bold;">${isHe ? 'יציאה' : 'Out'}</th>
-                                <th style="background-color: #3b82f6; color: #ffffff; padding: 4px; border: 1px solid #e5e7eb; text-align: ${isHe?'right':'left'}; font-weight: bold;">${isHe ? 'ניכוי הפסקה' : 'Lunch Ded.'}</th>
-                                <th style="background-color: #3b82f6; color: #ffffff; padding: 4px; border: 1px solid #e5e7eb; text-align: ${isHe?'right':'left'}; font-weight: bold;">${isHe ? 'שעות נוספות' : 'Overtime'}</th>
-                                <th style="background-color: #3b82f6; color: #ffffff; padding: 4px; border: 1px solid #e5e7eb; text-align: ${isHe?'right':'left'}; font-weight: bold;">${isHe ? 'לילה' : 'Night'}</th>
-                                <th style="background-color: #3b82f6; color: #ffffff; padding: 4px; border: 1px solid #e5e7eb; text-align: ${isHe?'right':'left'}; font-weight: bold;">${isHe ? 'שבת' : 'Saturday'}</th>
-                                <th style="background-color: #3b82f6; color: #ffffff; padding: 4px; border: 1px solid #e5e7eb; text-align: ${isHe?'right':'left'}; font-weight: bold;">${isHe ? 'סה"כ שעות' : 'Total Hrs'}</th>
-                                <th style="background-color: #3b82f6; color: #ffffff; padding: 4px; border: 1px solid #e5e7eb; text-align: ${isHe?'right':'left'}; font-weight: bold; width: 120px;">${isHe ? 'הערות' : 'Notes'}</th>
+                            <tr style="background-color: #f3f4f6;">
+                                <th style="padding: 6px; border: 1px solid #d1d5db; text-align: ${isHe?'right':'left'}; font-weight: bold; color: #000;">${tDate}</th>
+                                <th style="padding: 6px; border: 1px solid #d1d5db; text-align: ${isHe?'right':'left'}; font-weight: bold; color: #000;">${tDay}</th>
+                                <th style="padding: 6px; border: 1px solid #d1d5db; text-align: ${isHe?'right':'left'}; font-weight: bold; color: #000;">${tIn}</th>
+                                <th style="padding: 6px; border: 1px solid #d1d5db; text-align: ${isHe?'right':'left'}; font-weight: bold; color: #000;">${tOut}</th>
+                                <th style="padding: 6px; border: 1px solid #d1d5db; text-align: ${isHe?'right':'left'}; font-weight: bold; color: #000;">${tLunch}</th>
+                                <th style="padding: 6px; border: 1px solid #d1d5db; text-align: ${isHe?'right':'left'}; font-weight: bold; color: #000;">${tOvertime}</th>
+                                <th style="padding: 6px; border: 1px solid #d1d5db; text-align: ${isHe?'right':'left'}; font-weight: bold; color: #000;">${tNight}</th>
+                                <th style="padding: 6px; border: 1px solid #d1d5db; text-align: ${isHe?'right':'left'}; font-weight: bold; color: #000;">${tSat}</th>
+                                <th style="padding: 6px; border: 1px solid #d1d5db; text-align: ${isHe?'right':'left'}; font-weight: bold; color: #000;">${tTotal}</th>
+                                <th style="padding: 6px; border: 1px solid #d1d5db; text-align: ${isHe?'right':'left'}; font-weight: bold; color: #000; max-width: 150px;">${tNotes}</th>
                             </tr>
                         </thead>
-                        <tbody>${trs.replace(/padding:6px;/g, 'padding:4px;')}</tbody>
+                        <tbody>${trs.replace(/padding:4px;/g, 'padding:6px;').replace(/border:1px solid #ddd;/g, 'border:1px solid #d1d5db;')}</tbody>
                     </table>
 
-                    <div style="font-size: 11pt; line-height: 1.6; margin-bottom: 20px;">
-                        <div><strong style="font-weight: bold;">${isHe ? 'סה"כ שעות (ברוטו)' : 'Total Hours (Gross)'}:</strong> ${grossTotal.toFixed(2)}</div>
-                        <div><strong style="font-weight: bold;">${isHe ? 'סה"כ לאחר ניכוי הפסקה' : 'Total After Lunch Deduction'}:</strong> ${sumTotal.toFixed(2)}</div>
-                        <div>${isHe ? 'סה"כ שעות נוספות' : 'Total Overtime'}: ${sumOvertime.toFixed(2)}</div>
-                        <div>${isHe ? 'סה"כ שעות לילה' : 'Total Night Hours'}: ${sumNight.toFixed(2)}</div>
-                        <div>${isHe ? 'סה"כ שעות שבת' : 'Total Saturday Hours'}: ${sumSat.toFixed(2)}</div>
+                    <div style="font-size: 13px; line-height: 1.6; margin-bottom: 30px;">
+                        <div><strong style="font-weight: bold;">${tGross}:</strong> ${grossTotal.toFixed(2)}</div>
+                        <div><strong style="font-weight: bold;">${tAfterLunch}:</strong> ${sumTotal.toFixed(2)}</div>
+                        <div>${tTotalOvertime}: ${sumOvertime.toFixed(2)}</div>
+                        <div>${tTotalNight}: ${sumNight.toFixed(2)}</div>
+                        <div>${tTotalSat}: ${sumSat.toFixed(2)}</div>
                     </div>
 
-                    <div style="margin-top: 40px; display: flex; justify-content: space-between; font-size: 11pt;">
+                    <div style="margin-top: 50px; display: flex; justify-content: space-between; font-size: 13px;">
                         <div style="width: 45%;">
-                            <p style="margin: 5px 0;">${isHe ? 'מנהל' : 'Manager'}: ${managerName}</p>
-                            <p style="margin: 5px 0;">${isHe ? 'תאריך' : 'Date'}: _________________</p>
+                            <p style="margin: 5px 0;">${tManager}: ${managerName}</p>
+                            <p style="margin: 5px 0;">${tSigDate}: _________________</p>
                         </div>
                         <div style="width: 45%;">
-                            <p style="margin: 5px 0;">${isHe ? 'חתימה' : 'Signature'}: _________________</p>
+                            <p style="margin: 5px 0;">${tSignature}: _________________</p>
                         </div>
                     </div>
                 </div>
             `;
 
+            // Append container to document temporarily to ensure html2canvas computes layout correctly
+            container.style.position = 'absolute';
+            container.style.top = '-9999px';
+            container.style.left = '-9999px';
+            document.body.appendChild(container);
+
             const opt = {
                 margin:       [10, 10, 10, 10],
                 filename:     `Timesheet_${empId}_${month}.pdf`,
-                image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+                image:        { type: 'jpeg', quality: 1.0 },
+                html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#ffffff', windowWidth: 800 },
                 jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
 
             await html2pdf().set(opt).from(container).save();
+            
+            // Clean up
+            document.body.removeChild(container);
         }
 
     } catch(e) {

@@ -1577,15 +1577,28 @@ async function renderClientAnalytics() {
         </div>
     </div>
     
-    <!-- Chart and Top Workers -->
+    <!-- Charts and Top Workers -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        <div class="bg-white p-6 rounded shadow border lg:col-span-2">
-            <h3 class="font-bold mb-4">График отработанных часов (последние 30 дней)</h3>
-            <canvas id="analyticsChart" height="150"></canvas>
+        
+        <!-- Chart 1: Распределение (Пончик) -->
+        <div class="bg-white p-6 rounded shadow border flex flex-col items-center">
+            <h3 class="font-bold mb-4 text-gray-800 text-sm w-full">Типы часов (30 дн.)</h3>
+            <div class="relative w-full h-48 flex justify-center">
+                <canvas id="doughnutChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Chart 2: Динамика 7 дней -->
+        <div class="bg-white p-6 rounded shadow border">
+            <h3 class="font-bold mb-4 text-gray-800 text-sm">Активность (последние 7 дней)</h3>
+            <div class="relative w-full h-48">
+                <canvas id="barChart"></canvas>
+            </div>
         </div>
         
+        <!-- Top Workers -->
         <div class="bg-white p-6 rounded shadow border">
-            <h3 class="font-bold mb-4 text-gray-800 border-b pb-2">Топ-5 сотрудников</h3>
+            <h3 class="font-bold mb-4 text-gray-800 text-sm border-b pb-2">Топ-5 сотрудников</h3>
             <div id="top-workers-list" class="flex flex-col gap-3">
                 <div class="text-sm text-gray-500 italic">Загрузка...</div>
             </div>
@@ -1707,51 +1720,69 @@ async function renderClientAnalytics() {
         }
         document.getElementById('top-workers-list').innerHTML = topWorkersHtml;
         
-        // Render Chart
-        const ctx = document.getElementById('analyticsChart').getContext('2d');
-        const labels = Object.keys(dailyTotals).map(d => {
+        // ------------------
+        // Render Doughnut Chart
+        // ------------------
+        const ctxDoughnut = document.getElementById('doughnutChart').getContext('2d');
+        const regularTotal = Math.max(0, sumTotal - sumOvertime - sumNight);
+        new Chart(ctxDoughnut, {
+            type: 'doughnut',
+            data: {
+                labels: ['Обычные', 'Сверхурочные', 'Ночные'],
+                datasets: [{
+                    data: [regularTotal.toFixed(1), sumOvertime.toFixed(1), sumNight.toFixed(1)],
+                    backgroundColor: ['#10b981', '#f59e0b', '#3b82f6'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { boxWidth: 10, font: { size: 10 } }
+                    }
+                },
+                cutout: '70%'
+            }
+        });
+
+        // ------------------
+        // Render Bar Chart (Last 7 Days)
+        // ------------------
+        const ctxBar = document.getElementById('barChart').getContext('2d');
+        const allDates = Object.keys(dailyTotals);
+        const last7Dates = allDates.slice(-7);
+        
+        const labels7 = last7Dates.map(d => {
             const parts = d.split('-');
             return parts[1] + '.' + parts[2];
         });
-        
-        new Chart(ctx, {
+        const dataReg7 = last7Dates.map(d => dailyTotals[d]);
+        const dataOvt7 = last7Dates.map(d => dailyOvertime[d]);
+        const dataNig7 = last7Dates.map(d => dailyNight[d]);
+
+        new Chart(ctxBar, {
             type: 'bar',
             data: {
-                labels: labels,
+                labels: labels7,
                 datasets: [
-                    {
-                        label: 'Обычные часы',
-                        data: Object.values(dailyTotals),
-                        backgroundColor: '#10b981', // green-500
-                    },
-                    {
-                        label: 'Сверхурочные',
-                        data: Object.values(dailyOvertime),
-                        backgroundColor: '#f59e0b', // amber-500
-                    },
-                    {
-                        label: 'Ночные',
-                        data: Object.values(dailyNight),
-                        backgroundColor: '#3b82f6', // blue-500
-                    }
+                    { label: 'Обыч.', data: dataReg7, backgroundColor: '#10b981' },
+                    { label: 'Сверх.', data: dataOvt7, backgroundColor: '#f59e0b' },
+                    { label: 'Ночн.', data: dataNig7, backgroundColor: '#3b82f6' }
                 ]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 scales: { 
-                    x: { stacked: true, grid: { display: false } },
-                    y: { stacked: true, beginAtZero: true, grid: { color: '#f3f4f6' } }
+                    x: { stacked: true, grid: { display: false }, ticks: { font: { size: 10 } } },
+                    y: { stacked: true, beginAtZero: true, grid: { color: '#f3f4f6' }, ticks: { font: { size: 10 } } }
                 },
                 plugins: {
-                    legend: {
-                        position: 'top',
-                        labels: { boxWidth: 12, usePointStyle: true, pointStyle: 'circle' }
-                    },
-                    tooltip: {
-                        mode: 'index',
-                        intersect: false
-                    }
+                    legend: { display: false },
+                    tooltip: { mode: 'index', intersect: false }
                 }
             }
         });

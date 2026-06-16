@@ -1592,123 +1592,23 @@ async function renderClientAnalytics() {
     
     if(!hData.success || !eData.success) return;
     
-    const onlineCount = eData.employees.filter(e => e.isOnline).length;
-    document.getElementById('stat-online').textContent = onlineCount;
-    
-    // Process hours
-    const dailyTotals = {};
-    let sumTotal = 0;
-    let sumShifts = 0;
-    
-    for(let d = new Date(start); d <= end; d.setDate(d.getDate()+1)) {
-        dailyTotals[d.toISOString().split('T')[0]] = 0;
-    }
-    
-    for (let empId in hData.data) {
-        for (let date in hData.data[empId]) {
-            const h = hData.data[empId][date].totalHours || 0;
-            if (dailyTotals[date] !== undefined) dailyTotals[date] += h;
-            sumTotal += h;
-            sumShifts += hData.data[empId][date].shifts.length;
+    const onlineCount = eData.employees.filter(e => e.isOnline).leng        if (!window.html2pdf) {
+            await new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+                script.onload = resolve;
+                script.onerror = reject;
+                document.head.appendChild(script);
+            });
         }
-    }
-    
-    document.getElementById('stat-total').textContent = sumTotal.toFixed(1);
-    document.getElementById('stat-shifts').textContent = sumShifts;
-    
-    const ctx = document.getElementById('analyticsChart').getContext('2d');
-    new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: Object.keys(dailyTotals).map(d => d.split('-').slice(1).join('.')),
-            datasets: [{
-                label: 'Часов отработано',
-                data: Object.values(dailyTotals),
-                borderColor: '#3b82f6',
-                backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                borderWidth: 3,
-                pointBackgroundColor: '#2563eb',
-                tension: 0.4,
-                fill: true
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: { legend: { display: false } },
-            scales: { 
-                y: { beginAtZero: true, grid: { color: '#f3f4f6' } },
-                x: { grid: { display: false } }
-            }
-        }
-    });
-}
-
-async function generatePDFReport() {
-    const workerId = document.getElementById('pdf-worker-id').value;
-    const month = document.getElementById('pdf-month').value;
-    if (!month) return Swal.fire('Error', 'Please select a month', 'error');
-
-    const [yearStr, monthStr] = month.split('-');
-    const year = parseInt(yearStr);
-    const m = parseInt(monthStr) - 1;
-
-    const startDate = new Date(year, m, 1);
-    const endDate = new Date(year, m + 1, 0, 23, 59, 59, 999);
-    
-    // adjust to timezone offset to avoid JS date shifting when sending to server
-    const startStr = new Date(startDate.getTime() - startDate.getTimezoneOffset() * 60000).toISOString();
-    const endStr = new Date(endDate.getTime() - endDate.getTimezoneOffset() * 60000).toISOString();
-
-    const btn = document.getElementById('btn-generate-pdf');
-    const originalText = btn.textContent;
-    btn.textContent = 'Generating...';
-    btn.disabled = true;
-
-    try {
-        const res = await fetch(`${API_URL}/client/hours?startDate=${startStr}&endDate=${endStr}`, { headers: authHeaders() });
-        const r = await res.json();
-        
-        if (!r.success) throw new Error(r.error);
-
-        let reportData = r.report;
-        if (workerId !== 'ALL') {
-            reportData = reportData.filter(x => x.empId === workerId);
-        }
-
-        if (reportData.length === 0) {
-            Swal.fire('Info', 'No data found for the selected period.', 'info');
-            btn.textContent = originalText;
-            btn.disabled = false;
-            return;
-        }
-
-        // Group by empId
-        const workers = {};
-        reportData.forEach(row => {
-            if (!workers[row.empId]) {
-                workers[row.empId] = { name: row.name, rows: [] };
-            }
-            workers[row.empId].rows.push(row);
-        });
-
-        const { jsPDF } = window.jspdf;
 
         for (const [empId, data] of Object.entries(workers)) {
-            const doc = new jsPDF();
-            
-            // Header
-            doc.setFontSize(18);
-            doc.text('Monthly Timesheet Report', 14, 20);
-            doc.setFontSize(12);
-            doc.text(`Employee: ${data.name} (ID: ${empId})`, 14, 30);
-            doc.text(`Month: ${month}`, 14, 38);
-
-            const tableBody = [];
             let sumTotal = 0, sumOvertime = 0, sumNight = 0, sumSat = 0, sumLunch = 0;
-
+            
+            let trs = '';
             data.rows.forEach(r => {
                 const dDate = new Date(r.date);
-                const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                const days = isHe ? ['א\'', 'ב\'', 'ג\'', 'ד\'', 'ה\'', 'ו\'', 'שבת'] : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
                 const dayName = days[dDate.getDay()];
                 
                 let startTimes = [], endTimes = [];
@@ -1723,18 +1623,20 @@ async function generatePDFReport() {
                     });
                 }
 
-                tableBody.push([
-                    r.date,
-                    dayName,
-                    startTimes.join('\\n') || '-',
-                    endTimes.join('\\n') || '-',
-                    r.lunchDeduction || '0',
-                    r.overtimeHours || '0',
-                    r.nightHours || '0',
-                    r.saturdayHours || '0',
-                    r.totalHours || '0',
-                    r.notes || ''
-                ]);
+                trs += `
+                    <tr>
+                        <td style="padding:6px; border:1px solid #ddd;">${r.date}</td>
+                        <td style="padding:6px; border:1px solid #ddd;">${dayName}</td>
+                        <td style="padding:6px; border:1px solid #ddd;">${startTimes.join('<br>') || '-'}</td>
+                        <td style="padding:6px; border:1px solid #ddd;">${endTimes.join('<br>') || '-'}</td>
+                        <td style="padding:6px; border:1px solid #ddd;">${r.lunchDeduction || '0'}</td>
+                        <td style="padding:6px; border:1px solid #ddd;">${r.overtimeHours || '0'}</td>
+                        <td style="padding:6px; border:1px solid #ddd;">${r.nightHours || '0'}</td>
+                        <td style="padding:6px; border:1px solid #ddd;">${r.saturdayHours || '0'}</td>
+                        <td style="padding:6px; border:1px solid #ddd; font-weight:bold;">${r.totalHours || '0'}</td>
+                        <td style="padding:6px; border:1px solid #ddd; max-width: 150px; word-wrap: break-word;">${r.notes || ''}</td>
+                    </tr>
+                `;
 
                 sumLunch += parseFloat(r.lunchDeduction || 0);
                 sumOvertime += parseFloat(r.overtimeHours || 0);
@@ -1743,36 +1645,66 @@ async function generatePDFReport() {
                 sumTotal += parseFloat(r.totalHours || 0);
             });
 
-            doc.autoTable({
-                startY: 45,
-                head: [['Date', 'Day', 'In', 'Out', 'Lunch Ded.', 'Overtime', 'Night', 'Saturday', 'Total Hrs', 'Notes']],
-                body: tableBody,
-                theme: 'grid',
-                headStyles: { fillColor: [59, 130, 246] },
-                styles: { fontSize: 8, cellPadding: 2 },
-                columnStyles: { 9: { cellWidth: 40 } },
-            });
-
-            let finalY = doc.lastAutoTable.finalY || 45;
-            
-            // Totals
             const grossTotal = sumTotal + sumLunch;
-            doc.setFontSize(11);
-            doc.setFont(undefined, 'bold');
-            doc.text(`Total Hours (Gross): ${grossTotal.toFixed(2)}`, 14, finalY + 10);
-            doc.text(`Total After Lunch Deduction: ${sumTotal.toFixed(2)}`, 14, finalY + 16);
-            doc.setFont(undefined, 'normal');
-            doc.text(`Total Overtime: ${sumOvertime.toFixed(2)}`, 14, finalY + 22);
-            doc.text(`Total Night Hours: ${sumNight.toFixed(2)}`, 14, finalY + 28);
-            doc.text(`Total Saturday Hours: ${sumSat.toFixed(2)}`, 14, finalY + 34);
-
-            // Signature Area
+            const title = isHe ? 'דוח שעות חודשי' : (currentLang==='ru' ? 'Месячный Отчет' : 'Monthly Timesheet Report');
             const managerName = r.clientName || 'Manager';
-            doc.text(`Manager: ${managerName}`, 14, finalY + 50);
-            doc.text(`Date: ____________________`, 14, finalY + 60);
-            doc.text(`Signature: ____________________`, 100, finalY + 60);
+            
+            const container = document.createElement('div');
+            container.style.fontFamily = 'Inter, sans-serif';
+            container.style.color = '#333';
+            container.innerHTML = `
+                <div style="padding: 30px; direction: ${isHe ? 'rtl' : 'ltr'};">
+                    <h2 style="color: #2563eb; font-size: 24px; margin-bottom: 15px;">${title}</h2>
+                    <p style="font-size: 14px; margin-bottom: 5px;"><strong>${isHe ? 'עובד' : 'Employee'}:</strong> ${data.name} (ID: ${empId})</p>
+                    <p style="font-size: 14px; margin-bottom: 20px;"><strong>${isHe ? 'חודש' : 'Month'}:</strong> ${month}</p>
+                    
+                    <table style="width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 25px;">
+                        <thead>
+                            <tr style="background-color: #3b82f6; color: white;">
+                                <th style="padding: 8px; border: 1px solid #2563eb; text-align: ${isHe?'right':'left'};">${isHe ? 'תאריך' : 'Date'}</th>
+                                <th style="padding: 8px; border: 1px solid #2563eb; text-align: ${isHe?'right':'left'};">${isHe ? 'יום' : 'Day'}</th>
+                                <th style="padding: 8px; border: 1px solid #2563eb; text-align: ${isHe?'right':'left'};">${isHe ? 'כניסה' : 'In'}</th>
+                                <th style="padding: 8px; border: 1px solid #2563eb; text-align: ${isHe?'right':'left'};">${isHe ? 'יציאה' : 'Out'}</th>
+                                <th style="padding: 8px; border: 1px solid #2563eb; text-align: ${isHe?'right':'left'};">${isHe ? 'ניכוי הפסקה' : 'Lunch Ded.'}</th>
+                                <th style="padding: 8px; border: 1px solid #2563eb; text-align: ${isHe?'right':'left'};">${isHe ? 'שעות נוספות' : 'Overtime'}</th>
+                                <th style="padding: 8px; border: 1px solid #2563eb; text-align: ${isHe?'right':'left'};">${isHe ? 'לילה' : 'Night'}</th>
+                                <th style="padding: 8px; border: 1px solid #2563eb; text-align: ${isHe?'right':'left'};">${isHe ? 'שבת' : 'Saturday'}</th>
+                                <th style="padding: 8px; border: 1px solid #2563eb; text-align: ${isHe?'right':'left'};">${isHe ? 'סה"כ שעות' : 'Total Hrs'}</th>
+                                <th style="padding: 8px; border: 1px solid #2563eb; text-align: ${isHe?'right':'left'};">${isHe ? 'הערות' : 'Notes'}</th>
+                            </tr>
+                        </thead>
+                        <tbody>${trs}</tbody>
+                    </table>
 
-            doc.save(`Timesheet_${empId}_${month}.pdf`);
+                    <div style="font-size: 14px; line-height: 1.6;">
+                        <p><strong>${isHe ? 'סה"כ שעות (ברוטו)' : 'Total Hours (Gross)'}:</strong> ${grossTotal.toFixed(2)}</p>
+                        <p><strong>${isHe ? 'סה"כ לאחר ניכוי הפסקה' : 'Total After Lunch Deduction'}:</strong> ${sumTotal.toFixed(2)}</p>
+                        <p><strong>${isHe ? 'סה"כ שעות נוספות' : 'Total Overtime'}:</strong> ${sumOvertime.toFixed(2)}</p>
+                        <p><strong>${isHe ? 'סה"כ שעות לילה' : 'Total Night Hours'}:</strong> ${sumNight.toFixed(2)}</p>
+                        <p><strong>${isHe ? 'סה"כ שעות שבת' : 'Total Saturday Hours'}:</strong> ${sumSat.toFixed(2)}</p>
+                    </div>
+
+                    <div style="margin-top: 50px; display: flex; justify-content: space-between; font-size: 14px;">
+                        <div style="width: 45%;">
+                            <p>${isHe ? 'מנהל' : 'Manager'}: ${managerName}</p>
+                            <p>${isHe ? 'תאריך' : 'Date'}: _________________</p>
+                        </div>
+                        <div style="width: 45%;">
+                            <p>${isHe ? 'חתימה' : 'Signature'}: _________________</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            const opt = {
+                margin:       [10, 10, 10, 10],
+                filename:     `Timesheet_${empId}_${month}.pdf`,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            await html2pdf().set(opt).from(container).save();
         }
 
     } catch(e) {

@@ -1643,112 +1643,129 @@ async function renderClientAnalytics() {
     });
 }
 
+const hebrewToLatin = {
+    'א': 'A', 'ב': 'B', 'ג': 'G', 'ד': 'D', 'ה': 'H', 'ו': 'V', 'ז': 'Z', 'ח': 'CH', 'ט': 'T', 'י': 'Y', 'כ': 'K', 'ך': 'K', 'ל': 'L', 'מ': 'M', 'ם': 'M', 'נ': 'N', 'ן': 'N', 'ס': 'S', 'ע': 'A', 'פ': 'P', 'ף': 'P', 'צ': 'TS', 'ץ': 'TS', 'ק': 'K', 'ר': 'R', 'ש': 'SH', 'ת': 'T',
+    'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'yo', 'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'j', 'к': 'k', 'л': 'l', 'м': 'm', 'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u', 'ф': 'f', 'х': 'h', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'sch', 'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya',
+    'А': 'A', 'Б': 'B', 'В': 'V', 'Г': 'G', 'Д': 'D', 'Е': 'E', 'Ё': 'Yo', 'Ж': 'Zh', 'З': 'Z', 'И': 'I', 'Й': 'J', 'К': 'K', 'Л': 'L', 'М': 'M', 'Н': 'N', 'О': 'O', 'П': 'P', 'Р': 'R', 'С': 'S', 'Т': 'T', 'У': 'U', 'Ф': 'F', 'Х': 'H', 'Ц': 'Ts', 'Ч': 'Ch', 'Ш': 'Sh', 'Щ': 'Sch', 'Ъ': '', 'Ы': 'Y', 'Ь': '', 'Э': 'E', 'Ю': 'Yu', 'Я': 'Ya'
+};
+
+function transliterate(str) {
+    if (!str) return '';
+    return str.split('').map(char => hebrewToLatin[char] || char).join('');
+}
+
 async function generatePDFReport() {
-    const isHe = currentLang === 'he';
-            const isRu = currentLang === 'ru';
+    const workerId = document.getElementById('pdf-worker-id').value;
+    const month = document.getElementById('pdf-month').value;
+    if (!month) return Swal.fire('Error', 'Please select a month', 'error');
+    if (!workerId) return Swal.fire('Error', 'Please select a worker', 'error');
 
-            const tTitle = isHe ? 'דוח שעות חודשי' : (isRu ? 'Месячный Отчет' : 'Monthly Timesheet Report');
-            const tEmp = isHe ? 'עובד' : (isRu ? 'Сотрудник' : 'Employee');
-            const tMonth = isHe ? 'חודש' : (isRu ? 'Месяц' : 'Month');
+    const btn = document.getElementById('btn-download-pdf');
+    const originalText = btn.textContent;
+    btn.textContent = 'Generating...';
+    btn.disabled = true;
 
-            const tDate = isHe ? 'תאריך' : (isRu ? 'Дата' : 'Date');
-            const tDay = isHe ? 'יום' : (isRu ? 'День' : 'Day');
-            const tIn = isHe ? 'כניסה' : (isRu ? 'Вход' : 'In');
-            const tOut = isHe ? 'יציאה' : (isRu ? 'Выход' : 'Out');
-            const tLunch = isHe ? 'ניכוי הפסקה' : (isRu ? 'Обед' : 'Lunch Ded.');
-            const tOvertime = isHe ? 'שעות נוספות' : (isRu ? 'Переработка' : 'Overtime');
-            const tNight = isHe ? 'לילה' : (isRu ? 'Ночь' : 'Night');
-            const tSat = isHe ? 'שבת' : (isRu ? 'Суббота' : 'Saturday');
-            const tTotal = isHe ? 'סה"כ שעות' : (isRu ? 'Итого часов' : 'Total Hrs');
-            const tNotes = isHe ? 'הערות' : (isRu ? 'Заметки' : 'Notes');
+    try {
+        const response = await fetch(`${API_URL}/owner/reports?month=${month}`);
+        if (!response.ok) throw new Error('Failed to fetch report data');
+        const r = await response.json();
 
-            const tGross = isHe ? 'סה"כ שעות (ברוטו)' : (isRu ? 'Всего часов (Брутто)' : 'Total Hours (Gross)');
-            const tAfterLunch = isHe ? 'סה"כ לאחר ניכוי הפסקה' : (isRu ? 'Итого после вычета обеда' : 'Total After Lunch Deduction');
-            const tTotalOvertime = isHe ? 'סה"כ שעות נוספות' : (isRu ? 'Итого сверхурочных' : 'Total Overtime');
-            const tTotalNight = isHe ? 'סה"כ שעות לילה' : (isRu ? 'Итого ночных часов' : 'Total Night Hours');
-            const tTotalSat = isHe ? 'סה"כ שעות שבת' : (isRu ? 'Итого субботних часов' : 'Total Saturday Hours');
+        const workers = {};
+        r.data.forEach(row => {
+            if (workerId !== 'all' && row.employeeId !== workerId) return;
+            if (!workers[row.employeeId]) workers[row.employeeId] = { name: row.employeeName, rows: [] };
+            workers[row.employeeId].rows.push(row);
+        });
 
-            const tManager = isHe ? 'מנהל' : (isRu ? 'Менеджер' : 'Manager');
-            const tSigDate = isHe ? 'תאריך' : (isRu ? 'Дата' : 'Date');
-            const tSignature = isHe ? 'חתימה' : (isRu ? 'Подпись' : 'Signature');
+        if (Object.keys(workers).length === 0) {
+            Swal.fire('Info', 'No records found for this selection', 'info');
+            btn.textContent = originalText;
+            btn.disabled = false;
+            return;
+        }
 
+        const { jsPDF } = window.jspdf;
+
+        for (const [empId, data] of Object.entries(workers)) {
+            const doc = new jsPDF();
+            doc.setFontSize(18);
+            doc.text('Monthly Timesheet Report', 14, 20);
+            
+            // Convert name to Latin
+            const englishName = transliterate(data.name);
+
+            doc.setFontSize(12);
+            doc.text(`Employee: ${englishName} (ID: ${empId})`, 14, 30);
+            doc.text(`Month: ${month}`, 14, 38);
+
+            let sumTotal = 0, sumOvertime = 0, sumNight = 0, sumSat = 0, sumLunch = 0;
+            const tableBody = [];
+
+            data.rows.forEach(r => {
+                const dDate = new Date(r.date);
+                const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                const dayName = days[dDate.getDay()];
+                
+                let startTimes = [], endTimes = [];
+                if (r.times) {
+                    const shifts = r.times.split(', ');
+                    shifts.forEach(s => {
+                        const parts = s.split(' - ');
+                        if (parts.length === 2) {
+                            startTimes.push(parts[0].replace('*', ''));
+                            endTimes.push(parts[1].replace('*', ''));
+                        }
+                    });
+                }
+
+                tableBody.push([
+                    r.date,
+                    dayName,
+                    startTimes.join('\n') || '-',
+                    endTimes.join('\n') || '-',
+                    r.lunchDeduction || '0',
+                    r.overtimeHours || '0',
+                    r.nightHours || '0',
+                    r.saturdayHours || '0',
+                    r.totalHours || '0',
+                    r.notes ? transliterate(r.notes) : ''
+                ]);
+
+                sumLunch += parseFloat(r.lunchDeduction || 0);
+                sumOvertime += parseFloat(r.overtimeHours || 0);
+                sumNight += parseFloat(r.nightHours || 0);
+                sumSat += parseFloat(r.saturdayHours || 0);
+                sumTotal += parseFloat(r.totalHours || 0);
+            });
+
+            doc.autoTable({
+                startY: 45,
+                head: [['Date', 'Day', 'In', 'Out', 'Lunch Ded.', 'Overtime', 'Night', 'Saturday', 'Total Hrs', 'Notes']],
+                body: tableBody,
+                theme: 'grid',
+                headStyles: { fillColor: [59, 130, 246] },
+                styles: { fontSize: 8, cellPadding: 2 },
+                columnStyles: { 9: { cellWidth: 40 } },
+            });
+
+            let finalY = doc.lastAutoTable.finalY || 45;
+            
             const grossTotal = sumTotal + sumLunch;
-            const managerName = r.clientName || tManager;
-            
-            const container = document.createElement('div');
-            // Force width to simulate an A4 page width at 96 DPI, ensuring consistent rendering
-            container.style.width = '800px'; 
-            container.style.fontFamily = 'Helvetica, Arial, sans-serif';
-            container.style.color = '#000';
-            container.style.backgroundColor = '#fff';
-            
-            // Set element box-sizing to prevent padding from expanding the width
-            container.style.boxSizing = 'border-box';
-            
-            container.innerHTML = `
-                <div style="padding: 30px; direction: ${isHe ? 'rtl' : 'ltr'}; background: #fff; width: 100%; box-sizing: border-box;">
-                    <h2 style="color: #000; font-size: 22px; margin: 0 0 15px 0;">${tTitle}</h2>
-                    <div style="font-size: 14px; margin-bottom: 20px; line-height: 1.5;">
-                        <div><strong>${tEmp}:</strong> ${data.name} (ID: ${empId})</div>
-                        <div><strong>${tMonth}:</strong> ${month}</div>
-                    </div>
-                    
-                    <table style="width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 25px;">
-                        <thead>
-                            <tr style="background-color: #f3f4f6;">
-                                <th style="padding: 6px; border: 1px solid #d1d5db; text-align: ${isHe?'right':'left'}; font-weight: bold; color: #000;">${tDate}</th>
-                                <th style="padding: 6px; border: 1px solid #d1d5db; text-align: ${isHe?'right':'left'}; font-weight: bold; color: #000;">${tDay}</th>
-                                <th style="padding: 6px; border: 1px solid #d1d5db; text-align: ${isHe?'right':'left'}; font-weight: bold; color: #000;">${tIn}</th>
-                                <th style="padding: 6px; border: 1px solid #d1d5db; text-align: ${isHe?'right':'left'}; font-weight: bold; color: #000;">${tOut}</th>
-                                <th style="padding: 6px; border: 1px solid #d1d5db; text-align: ${isHe?'right':'left'}; font-weight: bold; color: #000;">${tLunch}</th>
-                                <th style="padding: 6px; border: 1px solid #d1d5db; text-align: ${isHe?'right':'left'}; font-weight: bold; color: #000;">${tOvertime}</th>
-                                <th style="padding: 6px; border: 1px solid #d1d5db; text-align: ${isHe?'right':'left'}; font-weight: bold; color: #000;">${tNight}</th>
-                                <th style="padding: 6px; border: 1px solid #d1d5db; text-align: ${isHe?'right':'left'}; font-weight: bold; color: #000;">${tSat}</th>
-                                <th style="padding: 6px; border: 1px solid #d1d5db; text-align: ${isHe?'right':'left'}; font-weight: bold; color: #000;">${tTotal}</th>
-                                <th style="padding: 6px; border: 1px solid #d1d5db; text-align: ${isHe?'right':'left'}; font-weight: bold; color: #000; max-width: 150px;">${tNotes}</th>
-                            </tr>
-                        </thead>
-                        <tbody>${trs.replace(/padding:4px;/g, 'padding:6px;').replace(/border:1px solid #ddd;/g, 'border:1px solid #d1d5db;')}</tbody>
-                    </table>
+            doc.setFontSize(11);
+            doc.setFont(undefined, 'bold');
+            doc.text(`Total Hours (Gross): ${grossTotal.toFixed(2)}`, 14, finalY + 10);
+            doc.text(`Total After Lunch Deduction: ${sumTotal.toFixed(2)}`, 14, finalY + 16);
+            doc.setFont(undefined, 'normal');
+            doc.text(`Total Overtime: ${sumOvertime.toFixed(2)}`, 14, finalY + 22);
+            doc.text(`Total Night Hours: ${sumNight.toFixed(2)}`, 14, finalY + 28);
+            doc.text(`Total Saturday Hours: ${sumSat.toFixed(2)}`, 14, finalY + 34);
 
-                    <div style="font-size: 13px; line-height: 1.6; margin-bottom: 30px;">
-                        <div><strong style="font-weight: bold;">${tGross}:</strong> ${grossTotal.toFixed(2)}</div>
-                        <div><strong style="font-weight: bold;">${tAfterLunch}:</strong> ${sumTotal.toFixed(2)}</div>
-                        <div>${tTotalOvertime}: ${sumOvertime.toFixed(2)}</div>
-                        <div>${tTotalNight}: ${sumNight.toFixed(2)}</div>
-                        <div>${tTotalSat}: ${sumSat.toFixed(2)}</div>
-                    </div>
+            const managerName = r.clientName ? transliterate(r.clientName) : 'Manager';
+            doc.text(`Manager: ${managerName}`, 14, finalY + 50);
+            doc.text(`Date: ____________________`, 14, finalY + 60);
+            doc.text(`Signature: ____________________`, 100, finalY + 60);
 
-                    <div style="margin-top: 50px; display: flex; justify-content: space-between; font-size: 13px;">
-                        <div style="width: 45%;">
-                            <p style="margin: 5px 0;">${tManager}: ${managerName}</p>
-                            <p style="margin: 5px 0;">${tSigDate}: _________________</p>
-                        </div>
-                        <div style="width: 45%;">
-                            <p style="margin: 5px 0;">${tSignature}: _________________</p>
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            // Append container to document temporarily to ensure html2canvas computes layout correctly
-            container.style.position = 'absolute';
-            container.style.top = '-9999px';
-            container.style.left = '-9999px';
-            document.body.appendChild(container);
-
-            const opt = {
-                margin:       [10, 10, 10, 10],
-                filename:     `Timesheet_${empId}_${month}.pdf`,
-                image:        { type: 'jpeg', quality: 1.0 },
-                html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#ffffff', windowWidth: 800 },
-                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-            };
-
-            await html2pdf().set(opt).from(container).save();
-            
-            // Clean up
-            document.body.removeChild(container);
+            doc.save(`Timesheet_${empId}_${month}.pdf`);
         }
 
     } catch(e) {
@@ -1758,7 +1775,6 @@ async function generatePDFReport() {
     btn.textContent = originalText;
     btn.disabled = false;
 }
-
 
 async function generateCSVReport() {
     const workerId = document.getElementById('pdf-worker-id').value;

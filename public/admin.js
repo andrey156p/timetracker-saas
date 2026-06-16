@@ -1592,7 +1592,106 @@ async function renderClientAnalytics() {
     
     if(!hData.success || !eData.success) return;
     
-    const onlineCount = eData.employees.filter(e => e.isOnline).leng        if (!window.html2pdf) {
+    const onlineCount = eData.employees.filter(e => e.isOnline).length;
+    document.getElementById('stat-online').textContent = onlineCount;
+    
+    // Process hours
+    const dailyTotals = {};
+    let sumTotal = 0;
+    let sumShifts = 0;
+    
+    for(let d = new Date(start); d <= end; d.setDate(d.getDate()+1)) {
+        dailyTotals[d.toISOString().split('T')[0]] = 0;
+    }
+    
+    for (let empId in hData.data) {
+        for (let date in hData.data[empId]) {
+            const h = hData.data[empId][date].totalHours || 0;
+            if (dailyTotals[date] !== undefined) dailyTotals[date] += h;
+            sumTotal += h;
+            sumShifts += hData.data[empId][date].shifts.length;
+        }
+    }
+    
+    document.getElementById('stat-total').textContent = sumTotal.toFixed(1);
+    document.getElementById('stat-shifts').textContent = sumShifts;
+    
+    const ctx = document.getElementById('analyticsChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: Object.keys(dailyTotals).map(d => d.split('-').slice(1).join('.')),
+            datasets: [{
+                label: 'Часов отработано',
+                data: Object.values(dailyTotals),
+                borderColor: '#3b82f6',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                borderWidth: 3,
+                pointBackgroundColor: '#2563eb',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: { 
+                y: { beginAtZero: true, grid: { color: '#f3f4f6' } },
+                x: { grid: { display: false } }
+            }
+        }
+    });
+}
+
+async function generatePDFReport() {
+    const workerId = document.getElementById('pdf-worker-id').value;
+    const month = document.getElementById('pdf-month').value;
+    if (!month) return Swal.fire('Error', 'Please select a month', 'error');
+
+    const [yearStr, monthStr] = month.split('-');
+    const year = parseInt(yearStr);
+    const m = parseInt(monthStr) - 1;
+
+    const startDate = new Date(year, m, 1);
+    const endDate = new Date(year, m + 1, 0, 23, 59, 59, 999);
+    
+    // adjust to timezone offset to avoid JS date shifting when sending to server
+    const startStr = new Date(startDate.getTime() - startDate.getTimezoneOffset() * 60000).toISOString();
+    const endStr = new Date(endDate.getTime() - endDate.getTimezoneOffset() * 60000).toISOString();
+
+    const btn = document.getElementById('btn-generate-pdf');
+    const originalText = btn.textContent;
+    btn.textContent = 'Generating...';
+    btn.disabled = true;
+
+    try {
+        const res = await fetch(`${API_URL}/client/hours?startDate=${startStr}&endDate=${endStr}`, { headers: authHeaders() });
+        const r = await res.json();
+        
+        if (!r.success) throw new Error(r.error);
+
+        let reportData = r.report;
+        if (workerId !== 'ALL') {
+            reportData = reportData.filter(x => x.empId === workerId);
+        }
+
+        if (reportData.length === 0) {
+            Swal.fire('Info', 'No data found for the selected period.', 'info');
+            btn.textContent = originalText;
+            btn.disabled = false;
+            return;
+        }
+
+        // Group by empId
+        const workers = {};
+        reportData.forEach(row => {
+            if (!workers[row.empId]) {
+                workers[row.empId] = { name: row.name, rows: [] };
+            }
+            workers[row.empId].rows.push(row);
+        });
+
+        if (!window.html2pdf) {
             await new Promise((resolve, reject) => {
                 const script = document.createElement('script');
                 script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';

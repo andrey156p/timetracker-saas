@@ -36,7 +36,7 @@
                 <svg class="w-8 h-8 text-indigo-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>
             </div>
             <div class="w-full">
-                <h3 id="podcast-title" class="font-bold text-indigo-900 mb-4">Listen to our System Overview (NotebookLM)</h3>
+                <h3 id="podcast-title" class="font-bold text-indigo-900 mb-4">Listen to our System Overview </h3>
                 <video controls class="w-full rounded-lg shadow-md bg-black">
                     <source src="assets/WorkTimeCounter___ניהול_חכם.mp4" type="video/mp4">
                     Your browser does not support the video element.
@@ -73,7 +73,7 @@
                 hero_title: "Stop Overpaying Your Workforce",
                 hero_subtitle: "The smartest GPS time tracking SaaS for construction, field workers, and mobile teams.",
                 hero_btn: "Start Free Trial",
-                pod_title: "Listen to our System Overview (NotebookLM)",
+                pod_title: "Listen to our System Overview ",
                 feat1_t: "Strict GPS Geofencing",
                 feat1_d: "Workers can only clock in within the assigned radius. If they leave, the shift automatically pauses.",
                 feat2_t: "Offline Mode (PWA)",
@@ -87,7 +87,7 @@
                 hero_title: "Хватит переплачивать за неотработанные часы",
                 hero_subtitle: "Умный GPS-трекер рабочего времени для строителей, бригад и выездного персонала.",
                 hero_btn: "Начать бесплатный триал",
-                pod_title: "Послушайте обзор системы (NotebookLM)",
+                pod_title: "Послушайте обзор системы ",
                 feat1_t: "Строгий GPS-контроль",
                 feat1_d: "Вход только в радиусе объекта. Если работник уходит по делам, смена автоматически ставится на паузу.",
                 feat2_t: "Оффлайн режим",
@@ -101,7 +101,7 @@
                 hero_title: "תפסיק לשלם על שעות שלא עבדו",
                 hero_subtitle: "מערכת דיווחי הנוכחות החכמה ביותר עם GPS לבנאים, צוותי שטח ועובדים ניידים.",
                 hero_btn: "התחל ניסיון בחינם",
-                pod_title: "האזן לסקירת המערכת שלנו (NotebookLM)",
+                pod_title: "האזן לסקירת המערכת שלנו ",
                 feat1_t: "בקרת GPS קפדנית",
                 feat1_d: "עובדים יכולים לדווח רק ברדיוס האתר. אם הם עוזבים, המשמרת מושהית אוטומטית.",
                 feat2_t: "מצב לא מקוון (PWA)",
@@ -144,11 +144,11 @@
             
             const { value: formValues } = await Swal.fire({
                 title: isHe ? 'התחל 14 ימי ניסיון' : (lang==='ru' ? 'Старт 14-дневного Триала' : 'Start 14-Day Trial'),
-                html: \`
-                    <input id="swal-company" class="swal2-input" placeholder="\${isHe?'שם החברה':'Название Компании / Company Name'}">
-                    <input id="swal-user" class="swal2-input" placeholder="\${isHe?'שם משתמש':'Логин / Username'}">
-                    <input id="swal-pass" type="password" class="swal2-input" placeholder="\${isHe?'סיסמה':'Пароль / Password'}">
-                \`,
+                html: `
+                    <input id="swal-company" class="swal2-input" placeholder="${isHe?'שם החברה':'Название Компании / Company Name'}">
+                    <input id="swal-user" class="swal2-input" placeholder="${isHe?'שם משתמש':'Логин / Username'}">
+                    <input id="swal-pass" type="password" class="swal2-input" placeholder="${isHe?'סיסמה':'Пароль / Password'}">
+                `,
                 focusConfirm: false,
                 confirmButtonText: isHe ? 'הרשמה' : (lang==='ru' ? 'Регистрация' : 'Register'),
                 preConfirm: () => {

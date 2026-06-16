@@ -290,7 +290,7 @@ async function renderOwnerClients() {
             <button onclick="createForeman()" class="bg-blue-600 text-white px-3 py-1 rounded" data-i18n="save"></button>
         </div>
     </div>
-    <table class="w-full text-left border-collapse bg-white shadow rounded">
+    <div class="overflow-x-auto w-full pb-2"><table class="w-full text-left border-collapse bg-white shadow rounded">
         <thead><tr class="bg-gray-100 border-b">
             <th class="p-2" data-i18n="foreman_name"></th>
             <th class="p-2" data-i18n="foreman_login"></th>
@@ -321,7 +321,7 @@ async function renderOwnerClients() {
             </td>
         </tr>`;
     });
-    html += `</tbody></table>`;
+    html += `</tbody></table></div>`;
     document.getElementById('view-content').innerHTML = html;
     translatePage();
 }
@@ -441,7 +441,7 @@ async function loadBilling() {
     const r = await res.json();
     if(!r.success) return showToast(r.error, true);
     
-    let html = `<table class="w-full text-left border-collapse bg-white shadow rounded">
+    let html = `<div class="overflow-x-auto w-full pb-2"><table class="w-full text-left border-collapse bg-white shadow rounded">
         <thead><tr class="bg-gray-100 border-b">
             <th class="p-2" data-i18n="foreman_name">Прораб</th>
             <th class="p-2" data-i18n="workers">Работники</th>
@@ -463,7 +463,7 @@ async function loadBilling() {
             </td>
         </tr>`;
     });
-    html += `</tbody></table>`;
+    html += `</tbody></table></div>`;
     const billingResultsEl = document.getElementById('billing-results');
     billingResultsEl.removeAttribute('data-i18n'); // CRITICAL FIX: prevent translatePage from overwriting innerHTML
     billingResultsEl.innerHTML = html;
@@ -491,7 +491,7 @@ async function renderOwnerInvoices() {
 
     let html = `
     <h2 class="text-xl font-bold mb-4" data-i18n="invoices_title">Выставленные счета (Invoices)</h2>
-    <table class="w-full text-left border-collapse bg-white shadow rounded">
+    <div class="overflow-x-auto w-full pb-2"><table class="w-full text-left border-collapse bg-white shadow rounded">
         <thead><tr class="bg-gray-100 border-b">
             <th class="p-2" data-i18n="foreman_name">Прораб</th>
             <th class="p-2" data-i18n="period">Период</th>
@@ -517,7 +517,7 @@ async function renderOwnerInvoices() {
             </td>
         </tr>`;
     });
-    html += `</tbody></table>`;
+    html += `</tbody></table></div>`;
     const viewContentEl = document.getElementById('view-content');
     viewContentEl.removeAttribute('data-i18n');
     viewContentEl.innerHTML = html;
@@ -742,7 +742,7 @@ async function renderClientWorkers() {
     </div>
 
     <h3 class="font-bold mb-2" data-i18n="tab_client_workers"></h3>
-    <table class="w-full text-left border-collapse bg-white shadow rounded">
+    <div class="overflow-x-auto w-full pb-2"><table class="w-full text-left border-collapse bg-white shadow rounded">
         <thead><tr class="bg-gray-100 border-b">
             <th class="p-2">ID</th>
             <th class="p-2" data-i18n="worker_name"></th>
@@ -787,7 +787,7 @@ async function renderClientWorkers() {
             </td>
         </tr>`;
     });
-    html += `</tbody></table>`;
+    html += `</tbody></table></div>`;
     document.getElementById('view-content').innerHTML = html;
     translatePage();
 }
@@ -1067,7 +1067,7 @@ async function renderClientShifts() {
 
     <h3 class="font-bold mb-4" data-i18n="matrix_title"></h3>
     <div class="bg-white p-4 rounded shadow border mb-6 overflow-x-auto">
-        <table class="w-full text-left border-collapse text-sm min-w-[800px]" id="schedule-matrix">
+        <div class="overflow-x-auto w-full pb-2"><table class="w-full text-left border-collapse text-sm min-w-[800px]" id="schedule-matrix">
             <thead>
                 <tr class="bg-gray-100 border-b">
                     <th class="p-2 w-48" data-i18n="worker_name">Разотник</th>
@@ -1078,7 +1078,7 @@ async function renderClientShifts() {
             <tbody id="matrix-body">
                 <tr><td colspan="8" class="text-center p-4" data-i18n="loading"></td></tr>
             </tbody>
-        </table>
+        </table></div>
     </div>
     
     <h3 class="font-bold mb-4" data-i18n="hours_worked"></h3>
@@ -1276,7 +1276,7 @@ async function loadClientHours() {
                         <div class="text-sm font-bold text-gray-700 bg-white px-2 py-1 rounded border border-blue-200">Σ: ${formatHM(grp.total)}</div>
                     </div>
                     <div class="overflow-x-auto">
-                        <table class="w-full text-left border-collapse text-sm employee-table-export">
+                        <div class="overflow-x-auto w-full pb-2"><table class="w-full text-left border-collapse text-sm employee-table-export">
                         <thead><tr class="bg-gray-100 border-b">
                             <th class="p-2 w-32" data-i18n="date">Дата</th>
                             <th class="p-2" data-i18n="shift_times">Вход/Выход</th>
@@ -1297,7 +1297,7 @@ async function loadClientHours() {
                     </tr>`;
                 });
                 
-                html += `</tbody></table></div></div>`;
+                html += `</tbody></table></div></div></div>`;
             }
             html += `</div>`; // end export-container
             html += `<div class="mt-4 text-xs text-gray-500">* &mdash; смены, добавленные или исправленные руководителем вручную</div>`;
@@ -1500,7 +1500,7 @@ async function renderClientForemen() {
 
     <div class="bg-white p-6 rounded shadow border">
         <h3 class="font-bold mb-4">Список бригадиров</h3>
-        <table class="w-full text-sm text-left">
+        <div class="overflow-x-auto w-full pb-2"><table class="w-full text-sm text-left">
             <thead class="text-xs text-gray-700 uppercase bg-gray-100">
                 <tr><th class="p-2">Имя</th><th class="p-2">Логин</th><th class="p-2">Пароль</th><th class="p-2">Статус</th><th class="p-2">Удалить</th></tr>
             </thead>
@@ -1522,7 +1522,7 @@ async function renderClientForemen() {
         </tr>`;
     });
     
-    html += `</tbody></table></div></div>`;
+    html += `</tbody></table></div></div></div>`;
     document.getElementById('view-content').innerHTML = html;
 }
 

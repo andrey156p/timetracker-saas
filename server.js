@@ -160,7 +160,7 @@ app.post('/api/admin/password', authOwner, async (req, res) => {
 app.get('/api/admin/clients', authOwner, async (req, res) => {
     const clients = await prisma.client.findMany({ 
         select: { 
-            id: true, username: true, name: true, isActive: true, tariffMode: true, pricePerUser: true, pricePerHour: true,
+            id: true, username: true, name: true, isActive: true, tariffMode: true, pricePerUser: true, pricePerHour: true, trialEndsAt: true,
             _count: { select: { foremen: true, geofences: true } }
         } 
     });

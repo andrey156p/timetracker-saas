@@ -1644,6 +1644,7 @@ async function renderClientAnalytics() {
 }
 
 async function generatePDFReport() {
+    const isHe = currentLang === 'he';
     const workerId = document.getElementById('pdf-worker-id').value;
     const month = document.getElementById('pdf-month').value;
     if (!month) return Swal.fire('Error', 'Please select a month', 'error');

@@ -1750,47 +1750,51 @@ async function generatePDFReport() {
             const managerName = r.clientName || 'Manager';
             
             const container = document.createElement('div');
-            container.style.fontFamily = 'Inter, sans-serif';
-            container.style.color = '#333';
+            container.style.fontFamily = 'Helvetica, Arial, sans-serif';
+            container.style.color = '#000';
+            container.style.width = '100%';
+            container.style.backgroundColor = '#fff';
             container.innerHTML = `
-                <div style="padding: 30px; direction: ${isHe ? 'rtl' : 'ltr'};">
-                    <h2 style="color: #2563eb; font-size: 24px; margin-bottom: 15px;">${title}</h2>
-                    <p style="font-size: 14px; margin-bottom: 5px;"><strong>${isHe ? 'עובד' : 'Employee'}:</strong> ${data.name} (ID: ${empId})</p>
-                    <p style="font-size: 14px; margin-bottom: 20px;"><strong>${isHe ? 'חודש' : 'Month'}:</strong> ${month}</p>
+                <div style="padding: 20px; direction: ${isHe ? 'rtl' : 'ltr'}; background: #fff;">
+                    <h2 style="color: #000; font-size: 18pt; margin: 0 0 10px 0;">${title}</h2>
+                    <div style="font-size: 12pt; margin-bottom: 15px; line-height: 1.4;">
+                        <div><strong>${isHe ? 'עובד' : 'Employee'}:</strong> ${data.name} (ID: ${empId})</div>
+                        <div><strong>${isHe ? 'חודש' : 'Month'}:</strong> ${month}</div>
+                    </div>
                     
-                    <table style="width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 25px;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 8pt; margin-bottom: 20px;">
                         <thead>
-                            <tr style="background-color: #3b82f6; color: white;">
-                                <th style="padding: 8px; border: 1px solid #2563eb; text-align: ${isHe?'right':'left'};">${isHe ? 'תאריך' : 'Date'}</th>
-                                <th style="padding: 8px; border: 1px solid #2563eb; text-align: ${isHe?'right':'left'};">${isHe ? 'יום' : 'Day'}</th>
-                                <th style="padding: 8px; border: 1px solid #2563eb; text-align: ${isHe?'right':'left'};">${isHe ? 'כניסה' : 'In'}</th>
-                                <th style="padding: 8px; border: 1px solid #2563eb; text-align: ${isHe?'right':'left'};">${isHe ? 'יציאה' : 'Out'}</th>
-                                <th style="padding: 8px; border: 1px solid #2563eb; text-align: ${isHe?'right':'left'};">${isHe ? 'ניכוי הפסקה' : 'Lunch Ded.'}</th>
-                                <th style="padding: 8px; border: 1px solid #2563eb; text-align: ${isHe?'right':'left'};">${isHe ? 'שעות נוספות' : 'Overtime'}</th>
-                                <th style="padding: 8px; border: 1px solid #2563eb; text-align: ${isHe?'right':'left'};">${isHe ? 'לילה' : 'Night'}</th>
-                                <th style="padding: 8px; border: 1px solid #2563eb; text-align: ${isHe?'right':'left'};">${isHe ? 'שבת' : 'Saturday'}</th>
-                                <th style="padding: 8px; border: 1px solid #2563eb; text-align: ${isHe?'right':'left'};">${isHe ? 'סה"כ שעות' : 'Total Hrs'}</th>
-                                <th style="padding: 8px; border: 1px solid #2563eb; text-align: ${isHe?'right':'left'};">${isHe ? 'הערות' : 'Notes'}</th>
+                            <tr>
+                                <th style="background-color: #3b82f6; color: #ffffff; padding: 4px; border: 1px solid #e5e7eb; text-align: ${isHe?'right':'left'}; font-weight: bold;">${isHe ? 'תאריך' : 'Date'}</th>
+                                <th style="background-color: #3b82f6; color: #ffffff; padding: 4px; border: 1px solid #e5e7eb; text-align: ${isHe?'right':'left'}; font-weight: bold;">${isHe ? 'יום' : 'Day'}</th>
+                                <th style="background-color: #3b82f6; color: #ffffff; padding: 4px; border: 1px solid #e5e7eb; text-align: ${isHe?'right':'left'}; font-weight: bold;">${isHe ? 'כניסה' : 'In'}</th>
+                                <th style="background-color: #3b82f6; color: #ffffff; padding: 4px; border: 1px solid #e5e7eb; text-align: ${isHe?'right':'left'}; font-weight: bold;">${isHe ? 'יציאה' : 'Out'}</th>
+                                <th style="background-color: #3b82f6; color: #ffffff; padding: 4px; border: 1px solid #e5e7eb; text-align: ${isHe?'right':'left'}; font-weight: bold;">${isHe ? 'ניכוי הפסקה' : 'Lunch Ded.'}</th>
+                                <th style="background-color: #3b82f6; color: #ffffff; padding: 4px; border: 1px solid #e5e7eb; text-align: ${isHe?'right':'left'}; font-weight: bold;">${isHe ? 'שעות נוספות' : 'Overtime'}</th>
+                                <th style="background-color: #3b82f6; color: #ffffff; padding: 4px; border: 1px solid #e5e7eb; text-align: ${isHe?'right':'left'}; font-weight: bold;">${isHe ? 'לילה' : 'Night'}</th>
+                                <th style="background-color: #3b82f6; color: #ffffff; padding: 4px; border: 1px solid #e5e7eb; text-align: ${isHe?'right':'left'}; font-weight: bold;">${isHe ? 'שבת' : 'Saturday'}</th>
+                                <th style="background-color: #3b82f6; color: #ffffff; padding: 4px; border: 1px solid #e5e7eb; text-align: ${isHe?'right':'left'}; font-weight: bold;">${isHe ? 'סה"כ שעות' : 'Total Hrs'}</th>
+                                <th style="background-color: #3b82f6; color: #ffffff; padding: 4px; border: 1px solid #e5e7eb; text-align: ${isHe?'right':'left'}; font-weight: bold; width: 120px;">${isHe ? 'הערות' : 'Notes'}</th>
                             </tr>
                         </thead>
-                        <tbody>${trs}</tbody>
+                        <tbody>${trs.replace(/padding:6px;/g, 'padding:4px;')}</tbody>
                     </table>
 
-                    <div style="font-size: 14px; line-height: 1.6;">
-                        <p><strong>${isHe ? 'סה"כ שעות (ברוטו)' : 'Total Hours (Gross)'}:</strong> ${grossTotal.toFixed(2)}</p>
-                        <p><strong>${isHe ? 'סה"כ לאחר ניכוי הפסקה' : 'Total After Lunch Deduction'}:</strong> ${sumTotal.toFixed(2)}</p>
-                        <p><strong>${isHe ? 'סה"כ שעות נוספות' : 'Total Overtime'}:</strong> ${sumOvertime.toFixed(2)}</p>
-                        <p><strong>${isHe ? 'סה"כ שעות לילה' : 'Total Night Hours'}:</strong> ${sumNight.toFixed(2)}</p>
-                        <p><strong>${isHe ? 'סה"כ שעות שבת' : 'Total Saturday Hours'}:</strong> ${sumSat.toFixed(2)}</p>
+                    <div style="font-size: 11pt; line-height: 1.6; margin-bottom: 20px;">
+                        <div><strong style="font-weight: bold;">${isHe ? 'סה"כ שעות (ברוטו)' : 'Total Hours (Gross)'}:</strong> ${grossTotal.toFixed(2)}</div>
+                        <div><strong style="font-weight: bold;">${isHe ? 'סה"כ לאחר ניכוי הפסקה' : 'Total After Lunch Deduction'}:</strong> ${sumTotal.toFixed(2)}</div>
+                        <div>${isHe ? 'סה"כ שעות נוספות' : 'Total Overtime'}: ${sumOvertime.toFixed(2)}</div>
+                        <div>${isHe ? 'סה"כ שעות לילה' : 'Total Night Hours'}: ${sumNight.toFixed(2)}</div>
+                        <div>${isHe ? 'סה"כ שעות שבת' : 'Total Saturday Hours'}: ${sumSat.toFixed(2)}</div>
                     </div>
 
-                    <div style="margin-top: 50px; display: flex; justify-content: space-between; font-size: 14px;">
+                    <div style="margin-top: 40px; display: flex; justify-content: space-between; font-size: 11pt;">
                         <div style="width: 45%;">
-                            <p>${isHe ? 'מנהל' : 'Manager'}: ${managerName}</p>
-                            <p>${isHe ? 'תאריך' : 'Date'}: _________________</p>
+                            <p style="margin: 5px 0;">${isHe ? 'מנהל' : 'Manager'}: ${managerName}</p>
+                            <p style="margin: 5px 0;">${isHe ? 'תאריך' : 'Date'}: _________________</p>
                         </div>
                         <div style="width: 45%;">
-                            <p>${isHe ? 'חתימה' : 'Signature'}: _________________</p>
+                            <p style="margin: 5px 0;">${isHe ? 'חתימה' : 'Signature'}: _________________</p>
                         </div>
                     </div>
                 </div>
@@ -1800,7 +1804,7 @@ async function generatePDFReport() {
                 margin:       [10, 10, 10, 10],
                 filename:     `Timesheet_${empId}_${month}.pdf`,
                 image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2, useCORS: true },
+                html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
                 jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
 

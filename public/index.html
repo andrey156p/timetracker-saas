@@ -1,43 +1,143 @@
 <!DOCTYPE html>
-<html lang="en" id="html-root">
+<html lang="en" id="html-root" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WorkTimeCounter - SaaS Time Tracking</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         .rtl { direction: rtl; }
+        body { font-family: 'Inter', sans-serif; }
+        h1, h2, h3, .font-display { font-family: 'Outfit', sans-serif; }
+        
+        /* Modern Gradient Background */
+        .hero-bg {
+            background: radial-gradient(120% 120% at 50% -10%, #ffffff 40%, #e0e7ff 100%);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .hero-bg::before {
+            content: "";
+            position: absolute;
+            top: -50px; left: -50px; width: 400px; height: 400px;
+            background: rgba(59, 130, 246, 0.15);
+            filter: blur(100px);
+            border-radius: 50%;
+            z-index: 0;
+        }
+
+        .hero-bg::after {
+            content: "";
+            position: absolute;
+            bottom: -50px; right: -50px; width: 500px; height: 500px;
+            background: rgba(99, 102, 241, 0.15);
+            filter: blur(120px);
+            border-radius: 50%;
+            z-index: 0;
+        }
+
+        /* Glassmorphism Cards */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .glass-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px -10px rgba(0,0,0,0.1);
+        }
+
+        .hero-img {
+            animation: float 6s ease-in-out infinite;
+        }
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+            100% { transform: translateY(0px); }
+        }
     </style>
 </head>
-<body class="bg-gray-50 text-gray-800 font-sans">
+<body class="bg-gray-50 text-gray-800">
     <!-- Navbar -->
-    <nav class="bg-white shadow">
-        <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
-            <div class="text-xl font-bold text-blue-600">WorkTimeCounter</div>
-            <div class="flex gap-4">
-                <a href="admin.html" id="nav-login" class="text-gray-600 hover:text-blue-600 font-semibold px-4 py-2">Login</a>
-                <button onclick="openRegister()" id="nav-register" class="bg-blue-600 text-white px-4 py-2 rounded shadow font-bold hover:bg-blue-700 transition">Try 14 Days Free</button>
+    <nav class="bg-white/80 backdrop-blur-md border-b border-gray-100 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center relative z-10">
+            <div class="text-2xl font-black text-blue-600 font-display tracking-tight">WorkTimeCounter</div>
+            <div class="flex gap-4 items-center">
+                <a href="admin.html" id="nav-login" class="text-gray-600 hover:text-blue-600 font-semibold px-4 py-2 transition">Login</a>
+                <a href="#order" id="nav-order" class="hidden md:block text-gray-600 hover:text-indigo-600 font-semibold px-4 py-2 transition">Contact Sales</a>
+                <button onclick="openRegister()" id="nav-register" class="bg-blue-600 text-white px-5 py-2.5 rounded-full shadow-md font-bold hover:bg-blue-700 hover:shadow-lg transition transform hover:scale-105">Try 14 Days Free</button>
             </div>
         </div>
     </nav>
 
     <!-- Hero Section -->
-    <header class="max-w-6xl mx-auto px-4 py-16 text-center">
-        <h1 id="hero-title" class="text-4xl md:text-6xl font-black mb-6 text-gray-900 leading-tight">Stop Overpaying Your Workforce</h1>
-        <p id="hero-subtitle" class="text-lg md:text-xl text-gray-600 mb-8 max-w-3xl mx-auto">The smartest GPS time tracking SaaS for construction, field workers, and mobile teams. Automatically deduct lunch, track overtime, and generate monthly reports.</p>
-        <button onclick="openRegister()" id="hero-btn" class="bg-blue-600 text-white px-8 py-4 rounded-lg shadow-lg font-bold text-xl hover:bg-blue-700 transition">Start Free Trial</button>
+    <header class="hero-bg py-20 lg:py-32 relative z-0 border-b border-gray-200/60">
+        <div class="max-w-7xl mx-auto px-4 grid lg:grid-cols-2 gap-12 items-center relative z-10">
+            <div class="text-center lg:text-left">
+                <h1 id="hero-title" class="text-5xl lg:text-7xl font-extrabold mb-6 text-slate-900 leading-[1.1] tracking-tight">
+                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">Stop Overpaying</span> Your Workforce
+                </h1>
+                <p id="hero-subtitle" class="text-lg md:text-xl text-slate-600 mb-10 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
+                    The smartest GPS time tracking SaaS for construction, field workers, and mobile teams. Automatically deduct lunch, track overtime, and generate monthly reports.
+                </p>
+                <div class="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+                    <button onclick="openRegister()" id="hero-btn" class="bg-blue-600 text-white px-8 py-4 rounded-full shadow-xl shadow-blue-600/30 font-bold text-xl hover:bg-blue-700 hover:-translate-y-1 transition duration-300">Start Free Trial</button>
+                    <a href="#video-section" id="hero-btn-video" class="bg-white text-slate-700 border border-slate-200 px-8 py-4 rounded-full shadow-sm font-bold text-xl hover:bg-slate-50 hover:-translate-y-1 transition duration-300 flex items-center justify-center gap-2">
+                        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"></path></svg>
+                        Watch Video
+                    </a>
+                </div>
+            </div>
+            <div class="relative hidden lg:block">
+                <div class="absolute inset-0 bg-gradient-to-tr from-blue-500 to-indigo-400 rounded-3xl blur-3xl opacity-30"></div>
+                <img src="hero.png" alt="Dashboard Preview" class="hero-img relative z-10 w-full object-contain rounded-2xl shadow-2xl border border-white/50 bg-white/50 backdrop-blur-sm p-2">
+            </div>
+        </div>
     </header>
 
-    <!-- Audio / Podcast Section -->
-    <section class="max-w-3xl mx-auto px-4 py-8 mb-12">
-        <div class="bg-indigo-50 border border-indigo-100 rounded-xl p-6 shadow-sm flex flex-col md:flex-row items-center gap-6">
-            <div class="w-16 h-16 bg-indigo-200 rounded-full flex items-center justify-center shrink-0">
-                <svg class="w-8 h-8 text-indigo-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>
+    <!-- Features -->
+    <section class="max-w-7xl mx-auto px-4 py-24 relative z-10 -mt-10">
+        <div class="grid md:grid-cols-3 gap-8">
+            <div class="glass-card p-8 rounded-3xl">
+                <div class="w-16 h-16 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center text-3xl mb-6 shadow-inner">📍</div>
+                <h3 id="feat1-title" class="text-2xl font-bold mb-3 text-slate-800">Strict GPS Geofencing</h3>
+                <p id="feat1-desc" class="text-slate-600 leading-relaxed">Workers can only clock in within the assigned radius. If they leave, the shift automatically pauses.</p>
             </div>
-            <div class="w-full">
-                <h3 id="podcast-title" class="font-bold text-indigo-900 mb-4">Listen to our System Overview </h3>
-                <video controls class="w-full rounded-lg shadow-md bg-black">
+            <div class="glass-card p-8 rounded-3xl">
+                <div class="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center text-3xl mb-6 shadow-inner">📴</div>
+                <h3 id="feat2-title" class="text-2xl font-bold mb-3 text-slate-800">Offline Mode (PWA)</h3>
+                <p id="feat2-desc" class="text-slate-600 leading-relaxed">No internet? No problem. The app logs timestamps and GPS via satellite, then syncs automatically.</p>
+            </div>
+            <div class="glass-card p-8 rounded-3xl">
+                <div class="w-16 h-16 bg-purple-100 text-purple-600 rounded-2xl flex items-center justify-center text-3xl mb-6 shadow-inner">📊</div>
+                <h3 id="feat3-title" class="text-2xl font-bold mb-3 text-slate-800">Auto-Timesheets</h3>
+                <p id="feat3-desc" class="text-slate-600 leading-relaxed">Generate PDF or CSV reports in 1 click. Overtime, night hours, and lunch deductions are calculated automatically.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Video Section -->
+    <section id="video-section" class="bg-slate-900 py-24 text-white">
+        <div class="max-w-7xl mx-auto px-4 grid lg:grid-cols-2 gap-16 items-center">
+            <div>
+                <h2 id="podcast-title" class="text-4xl md:text-5xl font-extrabold mb-6 font-display text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-300">See It In Action</h2>
+                <p id="podcast-desc" class="text-xl text-slate-300 mb-8 leading-relaxed">Watch a quick overview of how WorkTimeCounter can save you thousands of dollars by automating payroll and strictly enforcing shift attendance.</p>
+                <ul class="space-y-4 mb-8 text-slate-300 text-lg">
+                    <li class="flex items-center gap-3"><svg class="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Avoid buddy-punching</li>
+                    <li class="flex items-center gap-3"><svg class="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Precise minute-by-minute tracking</li>
+                    <li class="flex items-center gap-3"><svg class="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Real-time admin control</li>
+                </ul>
+            </div>
+            <div class="relative">
+                <div class="absolute inset-0 bg-gradient-to-tr from-blue-500/20 to-indigo-500/20 rounded-3xl blur-2xl transform scale-105"></div>
+                <video controls class="w-full rounded-2xl shadow-2xl relative z-10 border border-slate-700 bg-black">
                     <source src="assets/WorkTimeCounter___ניהול_חכם.mp4" type="video/mp4">
                     Your browser does not support the video element.
                 </video>
@@ -45,71 +145,138 @@
         </div>
     </section>
 
-    <!-- Features -->
-    <section class="max-w-6xl mx-auto px-4 py-12 grid md:grid-cols-3 gap-8">
-        <div class="bg-white p-6 rounded-xl shadow border border-gray-100">
-            <div class="text-blue-500 text-4xl mb-4">📍</div>
-            <h3 id="feat1-title" class="text-xl font-bold mb-2">Strict GPS Geofencing</h3>
-            <p id="feat1-desc" class="text-gray-600">Workers can only clock in within the assigned radius. If they leave, the shift automatically pauses.</p>
-        </div>
-        <div class="bg-white p-6 rounded-xl shadow border border-gray-100">
-            <div class="text-blue-500 text-4xl mb-4">📴</div>
-            <h3 id="feat2-title" class="text-xl font-bold mb-2">Offline Mode (PWA)</h3>
-            <p id="feat2-desc" class="text-gray-600">No internet? No problem. The app logs timestamps and GPS via satellite, then syncs automatically.</p>
-        </div>
-        <div class="bg-white p-6 rounded-xl shadow border border-gray-100">
-            <div class="text-blue-500 text-4xl mb-4">📊</div>
-            <h3 id="feat3-title" class="text-xl font-bold mb-2">Auto-Timesheets</h3>
-            <p id="feat3-desc" class="text-gray-600">Generate PDF or CSV reports in 1 click. Overtime, night hours, and lunch deductions are calculated automatically.</p>
+    <!-- Order / Contact Form -->
+    <section id="order" class="py-24 bg-white relative">
+        <div class="absolute top-0 left-0 w-full h-1/2 bg-slate-50"></div>
+        <div class="max-w-4xl mx-auto px-4 relative z-10">
+            <div class="bg-white rounded-3xl shadow-2xl border border-gray-100 p-8 md:p-12">
+                <div class="text-center mb-10">
+                    <h2 id="form-title" class="text-3xl md:text-4xl font-extrabold text-slate-900 mb-4 font-display">Ready to Upgrade?</h2>
+                    <p id="form-subtitle" class="text-lg text-slate-600">Send us a request and our sales team will contact you with a customized offer.</p>
+                </div>
+                <form id="contact-form" class="space-y-6" onsubmit="submitContactForm(event)">
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div>
+                            <label id="lbl-name" class="block text-sm font-semibold text-slate-700 mb-2">Full Name</label>
+                            <input type="text" id="contact-name" required class="w-full border border-gray-300 px-4 py-3 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-slate-50">
+                        </div>
+                        <div>
+                            <label id="lbl-company" class="block text-sm font-semibold text-slate-700 mb-2">Company Name</label>
+                            <input type="text" id="contact-company" required class="w-full border border-gray-300 px-4 py-3 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-slate-50">
+                        </div>
+                    </div>
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div>
+                            <label id="lbl-phone" class="block text-sm font-semibold text-slate-700 mb-2">Phone Number</label>
+                            <input type="tel" id="contact-phone" required class="w-full border border-gray-300 px-4 py-3 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-slate-50">
+                        </div>
+                        <div>
+                            <label id="lbl-email" class="block text-sm font-semibold text-slate-700 mb-2">Email Address</label>
+                            <input type="email" id="contact-email" required class="w-full border border-gray-300 px-4 py-3 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-slate-50">
+                        </div>
+                    </div>
+                    <div class="pt-4 text-center">
+                        <button type="submit" id="btn-submit" class="bg-indigo-600 text-white px-10 py-4 rounded-full shadow-lg shadow-indigo-600/30 font-bold text-xl hover:bg-indigo-700 hover:-translate-y-1 transition duration-300 w-full md:w-auto">
+                            Send Request
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     </section>
 
-    <!-- Register Modal Logic -->
+    <!-- Footer -->
+    <footer class="bg-slate-900 border-t border-slate-800 text-slate-400 py-12 text-center">
+        <div class="max-w-6xl mx-auto px-4">
+            <div class="text-2xl font-black text-white font-display mb-4 tracking-tight">WorkTimeCounter</div>
+            <p>© 2026 WorkTimeCounter SaaS. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- Script Logic -->
     <script>
         const translations = {
             "en": {
                 nav_login: "Login",
+                nav_order: "Contact Sales",
                 nav_register: "Try 14 Days Free",
-                hero_title: "Stop Overpaying Your Workforce",
-                hero_subtitle: "The smartest GPS time tracking SaaS for construction, field workers, and mobile teams.",
+                hero_title_1: "Stop Overpaying",
+                hero_title_2: " Your Workforce",
+                hero_subtitle: "The smartest GPS time tracking SaaS for construction, field workers, and mobile teams. Automatically deduct lunch, track overtime, and generate monthly reports.",
                 hero_btn: "Start Free Trial",
-                pod_title: "Listen to our System Overview ",
+                hero_btn_video: "Watch Video",
+                pod_title: "See It In Action",
+                pod_desc: "Watch a quick overview of how WorkTimeCounter can save you thousands of dollars by automating payroll and strictly enforcing shift attendance.",
                 feat1_t: "Strict GPS Geofencing",
                 feat1_d: "Workers can only clock in within the assigned radius. If they leave, the shift automatically pauses.",
                 feat2_t: "Offline Mode (PWA)",
                 feat2_d: "No internet? No problem. The app logs timestamps and GPS via satellite, then syncs automatically.",
                 feat3_t: "Auto-Timesheets",
-                feat3_d: "Generate PDF or CSV reports in 1 click. Overtime, night hours, and lunch deductions are calculated automatically."
+                feat3_d: "Generate PDF or CSV reports in 1 click. Overtime, night hours, and lunch deductions are calculated automatically.",
+                form_title: "Ready to Upgrade?",
+                form_subtitle: "Send us a request and our sales team will contact you with a customized offer.",
+                lbl_name: "Full Name",
+                lbl_company: "Company Name",
+                lbl_phone: "Phone Number",
+                lbl_email: "Email Address",
+                btn_submit: "Send Request",
+                success_msg: "Success! We will contact you shortly."
             },
             "ru": {
                 nav_login: "Войти",
+                nav_order: "Отдел продаж",
                 nav_register: "Попробовать 14 дней",
-                hero_title: "Хватит переплачивать за неотработанные часы",
-                hero_subtitle: "Умный GPS-трекер рабочего времени для строителей, бригад и выездного персонала.",
+                hero_title_1: "Хватит переплачивать",
+                hero_title_2: " за неотработанные часы",
+                hero_subtitle: "Умный GPS-трекер рабочего времени для строителей, бригад и выездного персонала. Авто-отчеты и учет переработок.",
                 hero_btn: "Начать бесплатный триал",
-                pod_title: "Послушайте обзор системы ",
+                hero_btn_video: "Смотреть Видео",
+                pod_title: "Посмотрите в действии",
+                pod_desc: "Узнайте, как WorkTimeCounter экономит вам тысячи долларов, автоматизируя расчет зарплаты и строго контролируя присутствие на объекте.",
                 feat1_t: "Строгий GPS-контроль",
                 feat1_d: "Вход только в радиусе объекта. Если работник уходит по делам, смена автоматически ставится на паузу.",
                 feat2_t: "Оффлайн режим",
                 feat2_d: "Нет интернета в подвале? Приложение сохраняет GPS локально и отправляет данные при появлении сети.",
                 feat3_t: "Авто-отчеты PDF / CSV",
-                feat3_d: "Генерация табелей в 1 клик. Переработки, ночные смены и авто-вычет обедов считаются сами."
+                feat3_d: "Генерация табелей в 1 клик. Переработки, ночные смены и авто-вычет обедов считаются сами.",
+                form_title: "Оформить Заказ",
+                form_subtitle: "Оставьте заявку, и мы свяжемся с вами для подключения системы.",
+                lbl_name: "Ваше Имя",
+                lbl_company: "Название Компании",
+                lbl_phone: "Номер Телефона",
+                lbl_email: "E-mail",
+                btn_submit: "Отправить Заявку",
+                success_msg: "Успешно! Мы скоро с вами свяжемся."
             },
             "he": {
                 nav_login: "התחברות",
+                nav_order: "צור קשר",
                 nav_register: "נסה 14 ימים בחינם",
-                hero_title: "תפסיק לשלם על שעות שלא עבדו",
+                hero_title_1: "תפסיק לשלם על",
+                hero_title_2: " שעות שלא עבדו",
                 hero_subtitle: "מערכת דיווחי הנוכחות החכמה ביותר עם GPS לבנאים, צוותי שטח ועובדים ניידים.",
                 hero_btn: "התחל ניסיון בחינם",
-                pod_title: "האזן לסקירת המערכת שלנו ",
+                hero_btn_video: "צפה בסרטון",
+                pod_title: "ראה את המערכת בפעולה",
+                pod_desc: "צפה כיצד המערכת חוסכת לך אלפי שקלים על ידי אוטומציה של השכר ואכיפת נוכחות מדויקת.",
                 feat1_t: "בקרת GPS קפדנית",
                 feat1_d: "עובדים יכולים לדווח רק ברדיוס האתר. אם הם עוזבים, המשמרת מושהית אוטומטית.",
                 feat2_t: "מצב לא מקוון (PWA)",
                 feat2_d: "אין אינטרנט? אין בעיה. האפליקציה שומרת נתונים ו-GPS באמצעות לוויין, ומסתנכרנת כשחוזר האינטרנט.",
                 feat3_t: "דוחות נוכחות אוטומטיים",
-                feat3_d: "הפקת דוחות PDF או CSV בלחיצה. שעות נוספות, שעות לילה וניכוי הפסקות מחושבים אוטומטית."
+                feat3_d: "הפקת דוחות PDF או CSV בלחיצה. שעות נוספות, שעות לילה וניכוי הפסקות מחושבים אוטומטית.",
+                form_title: "מוכנים לשדרג?",
+                form_subtitle: "שלחו לנו בקשה וצוות המכירות שלנו ייצור עמכם קשר עם הצעה מותאמת אישית.",
+                lbl_name: "שם מלא",
+                lbl_company: "שם החברה",
+                lbl_phone: "מספר טלפון",
+                lbl_email: "כתובת אימייל",
+                btn_submit: "שלח בקשה",
+                success_msg: "הצלחה! ניצור איתך קשר בהקדם."
             }
         };
+
+        let currentLangObj = translations["en"];
 
         function applyTranslations() {
             let lang = navigator.language.slice(0, 2);
@@ -121,12 +288,18 @@
             }
 
             const t = translations[lang];
+            currentLangObj = t;
             document.getElementById('nav-login').innerText = t.nav_login;
+            document.getElementById('nav-order').innerText = t.nav_order;
             document.getElementById('nav-register').innerText = t.nav_register;
-            document.getElementById('hero-title').innerText = t.hero_title;
+            
+            document.getElementById('hero-title').innerHTML = \`<span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">\${t.hero_title_1}</span>\${t.hero_title_2}\`;
             document.getElementById('hero-subtitle').innerText = t.hero_subtitle;
             document.getElementById('hero-btn').innerText = t.hero_btn;
+            document.getElementById('hero-btn-video').innerHTML = \`<svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"></path></svg> \${t.hero_btn_video}\`;
+            
             document.getElementById('podcast-title').innerText = t.pod_title;
+            document.getElementById('podcast-desc').innerText = t.pod_desc;
             
             document.getElementById('feat1-title').innerText = t.feat1_t;
             document.getElementById('feat1-desc').innerText = t.feat1_d;
@@ -134,9 +307,54 @@
             document.getElementById('feat2-desc').innerText = t.feat2_d;
             document.getElementById('feat3-title').innerText = t.feat3_t;
             document.getElementById('feat3-desc').innerText = t.feat3_d;
+
+            document.getElementById('form-title').innerText = t.form_title;
+            document.getElementById('form-subtitle').innerText = t.form_subtitle;
+            document.getElementById('lbl-name').innerText = t.lbl_name;
+            document.getElementById('lbl-company').innerText = t.lbl_company;
+            document.getElementById('lbl-phone').innerText = t.lbl_phone;
+            document.getElementById('lbl-email').innerText = t.lbl_email;
+            document.getElementById('btn-submit').innerText = t.btn_submit;
         }
 
         applyTranslations();
+
+        async function submitContactForm(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btn-submit');
+            btn.disabled = true;
+            btn.style.opacity = '0.7';
+
+            const payload = {
+                name: document.getElementById('contact-name').value,
+                company: document.getElementById('contact-company').value,
+                phone: document.getElementById('contact-phone').value,
+                email: document.getElementById('contact-email').value
+            };
+
+            try {
+                const res = await fetch('/api/public/contact', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (res.ok) {
+                    Swal.fire({
+                        title: currentLangObj.success_msg,
+                        icon: 'success',
+                        confirmButtonColor: '#4f46e5'
+                    });
+                    document.getElementById('contact-form').reset();
+                } else {
+                    Swal.fire('Error', 'Something went wrong', 'error');
+                }
+            } catch(err) {
+                Swal.fire('Error', 'Network error', 'error');
+            }
+            btn.disabled = false;
+            btn.style.opacity = '1';
+        }
 
         async function openRegister() {
             let lang = navigator.language.slice(0, 2);
@@ -144,12 +362,13 @@
             
             const { value: formValues } = await Swal.fire({
                 title: isHe ? 'התחל 14 ימי ניסיון' : (lang==='ru' ? 'Старт 14-дневного Триала' : 'Start 14-Day Trial'),
-                html: `
-                    <input id="swal-company" class="swal2-input" placeholder="${isHe?'שם החברה':'Название Компании / Company Name'}">
-                    <input id="swal-user" class="swal2-input" placeholder="${isHe?'שם משתמש':'Логин / Username'}">
-                    <input id="swal-pass" type="password" class="swal2-input" placeholder="${isHe?'סיסמה':'Пароль / Password'}">
-                `,
+                html: \`
+                    <input id="swal-company" class="swal2-input" placeholder="\${isHe?'שם החברה':'Название Компании / Company Name'}">
+                    <input id="swal-user" class="swal2-input" placeholder="\${isHe?'שם משתמש':'Логин / Username'}">
+                    <input id="swal-pass" type="password" class="swal2-input" placeholder="\${isHe?'סיסמה':'Пароль / Password'}">
+                \`,
                 focusConfirm: false,
+                confirmButtonColor: '#3b82f6',
                 confirmButtonText: isHe ? 'הרשמה' : (lang==='ru' ? 'Регистрация' : 'Register'),
                 preConfirm: () => {
                     return {
@@ -168,7 +387,12 @@
                 });
                 const r = await res.json();
                 if (r.success) {
-                    Swal.fire('Success', isHe?'החשבון נוצר! מעבר לדף ההתחברות...':'Account created! Redirecting to login...', 'success').then(() => {
+                    Swal.fire({
+                        title: 'Success', 
+                        text: isHe?'החשבון נוצר! מעבר לדף ההתחברות...':'Account created! Redirecting to login...', 
+                        icon: 'success',
+                        confirmButtonColor: '#3b82f6'
+                    }).then(() => {
                         window.location.href = 'admin.html';
                     });
                 } else {

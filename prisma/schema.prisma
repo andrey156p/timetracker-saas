@@ -147,3 +147,12 @@ model PushSubscription {
   auth      String
   createdAt DateTime @default(now())
 }
+
+model ContactRequest {
+  id        String   @id @default(uuid())
+  name      String
+  company   String
+  email     String?
+  phone     String?
+  createdAt DateTime @default(now())
+}

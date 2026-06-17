@@ -68,6 +68,51 @@ function requireClientRole(req, res, next) {
 // ==========================================
 // AUTHENTICATION & REGISTRATION
 // ==========================================
+
+const nodemailer = require('nodemailer');
+
+app.post('/api/public/contact', async (req, res) => {
+    const { name, company, email, phone } = req.body;
+    try {
+        await prisma.contactRequest.create({
+            data: { name, company, email, phone }
+        });
+
+        const transporter = nodemailer.createTransport({
+            service: 'gmail', // Fallback config, actually we just try to log it since we might not have a real app password
+            auth: {
+                user: process.env.EMAIL_USER || 'dummy@gmail.com',
+                pass: process.env.EMAIL_PASS || 'dummy'
+            }
+        });
+
+        // Normally we'd send here, but we will catch auth errors to not fail the API response if credentials aren't set
+        try {
+            if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+                await transporter.sendMail({
+                    from: '"TimeTracker SaaS" <no-reply@timetrackersaas.com>',
+                    to: 'andrey156@gmail.com',
+                    subject: 'Новая заявка с лендинга (TimeTracker)',
+                    text: `Новая заявка:
+Имя: ${name}
+Компания: ${company}
+Email: ${email}
+Телефон: ${phone}`
+                });
+            } else {
+                console.log('Skipping email send because EMAIL_USER is not set. Saved to DB.');
+            }
+        } catch (mailErr) {
+            console.error('Mail send error:', mailErr);
+        }
+
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Contact error:', err);
+        res.json({ success: false, error: err.message });
+    }
+});
+
 app.post('/api/public/register', async (req, res) => {
     try {
         const { username, password, name } = req.body;

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'timetracker-v25';
+const CACHE_NAME = 'timetracker-v26';
 const urlsToCache = [
   './',
   './app.html',

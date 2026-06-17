@@ -10,6 +10,30 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
+
+// Global fetch interceptor for TRIAL_EXPIRED
+const originalFetch = window.fetch;
+window.fetch = async function() {
+    const res = await originalFetch.apply(this, arguments);
+    if (res.status === 403) {
+        const clone = res.clone();
+        try {
+            const data = await clone.json();
+            if (data.errorCode === 'TRIAL_EXPIRED') {
+                Swal.fire({
+                    title: 'Система заблокирована',
+                    text: 'Пробный период вашей компании завершен. Пожалуйста, свяжитесь с руководством.',
+                    icon: 'error',
+                    confirmButtonText: 'ОК'
+                }).then(() => {
+                    logout();
+                });
+            }
+        } catch(e) {}
+    }
+    return res;
+};
+
         tailwind.config = {
             theme: {
                 extend: {

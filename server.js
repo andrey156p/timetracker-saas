@@ -57,7 +57,7 @@ function authClient(req, res, next) {
         if (decoded.role !== 'client' && decoded.role !== 'foreman') throw new Error();
         req.user = decoded;
 
-        const clientIdToCheck = decoded.role === 'client' ? decoded.id : decoded.clientId;
+        const clientIdToCheck = decoded.clientId;
         prisma.client.findUnique({ where: { id: clientIdToCheck } }).then(client => {
             if (!client || !client.isActive) return res.status(403).json({ success: false, error: 'Аккаунт заблокирован' });
             if (client.trialEndsAt && new Date() > client.trialEndsAt) {

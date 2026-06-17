@@ -1195,7 +1195,7 @@ app.post('/api/worker/log', async (req, res) => {
             // Check if we need to add a note
             let notesToAdd = [];
             if (isOutZone) {
-                notesToAdd.push('Закрыл смену вне рабочей зоны');
+                notesToAdd.push('Closed shift outside work zone');
             }
             
             // Check if closed later than schedule
@@ -1209,7 +1209,7 @@ app.post('/api/worker/log', async (req, res) => {
                 // Assuming shifts don't cross midnight, or if they do, it's complex. Let's just do a basic string comparison.
                 let latestEnd = ends.sort().reverse()[0];
                 if (curTimeStr > latestEnd) {
-                    notesToAdd.push('Закрыл смену позже графика');
+                    notesToAdd.push('Closed shift later than schedule');
                 }
             }
 
@@ -1348,7 +1348,7 @@ app.post('/api/client/employees/:id/force-exit', authClient, async (req, res) =>
             where: { clientId: req.user.clientId, empId, date: todayStr }
         });
         
-        const noteMsg = 'Смена прервана руководителем';
+        const noteMsg = 'Shift terminated by manager';
         if (existingNote) {
             if (!existingNote.noteText.includes(noteMsg)) {
                 await prisma.dailyNote.update({

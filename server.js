@@ -1162,6 +1162,7 @@ app.post('/api/worker/log', async (req, res) => {
         if (!gf) return res.status(404).json({ success: false, error: 'Работник не найден' });
         if (!gf.client.isActive) return res.status(403).json({ success: false, error: 'Система заблокирована' });
 
+        let isOutZone = false;
         // If not mobile, check geofence distance
         if (!gf.isMobile) {
             function getDist(lat1, lon1, lat2, lon2) {
@@ -1173,7 +1174,11 @@ app.post('/api/worker/log', async (req, res) => {
             }
             if (!lat || !lng) return res.status(400).json({ success: false, error: 'Геолокация обязательна' });
             if (getDist(gf.lat, gf.lng, lat, lng) > gf.radius) {
-                return res.status(403).json({ success: false, error: 'Вы вне зоны объекта!' });
+                if (action === 'Выход') {
+                    isOutZone = true; // Allow clock out, but remember they are out of zone
+                } else {
+                    return res.status(403).json({ success: false, error: 'Вы вне зоны объекта!' });
+                }
             }
         }
 
@@ -1187,6 +1192,50 @@ app.post('/api/worker/log', async (req, res) => {
 
         let todayHours = 0;
         if (action === 'Выход') {
+            // Check if we need to add a note
+            let notesToAdd = [];
+            if (isOutZone) {
+                notesToAdd.push('Закрыл смену вне рабочей зоны');
+            }
+            
+            // Check if closed later than schedule
+            const now = new Date();
+            const curTimeStr = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+            const ends = [gf.shiftMorningEnd, gf.shiftEveningEnd, gf.shiftNightEnd].filter(Boolean);
+            if (ends.length > 0) {
+                // If the current time is strictly greater than the latest end time by more than say, 30 minutes?
+                // Or just if it's greater. The user said "позже окончания своей указанной смены".
+                // Let's just find if curTimeStr is greater than the latest shift end.
+                // Assuming shifts don't cross midnight, or if they do, it's complex. Let's just do a basic string comparison.
+                let latestEnd = ends.sort().reverse()[0];
+                if (curTimeStr > latestEnd) {
+                    notesToAdd.push('Закрыл смену позже графика');
+                }
+            }
+
+            if (notesToAdd.length > 0) {
+                try {
+                    const tzDate = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Jerusalem' }));
+                    const dateStr = tzDate.getFullYear() + '-' + String(tzDate.getMonth()+1).padStart(2,'0') + '-' + String(tzDate.getDate()).padStart(2,'0');
+                    const noteText = '(' + notesToAdd.join(', ') + ')';
+                    const existingNote = await prisma.dailyNote.findFirst({
+                        where: { clientId: gf.clientId, empId, dateStr }
+                    });
+                    if (existingNote) {
+                        if (!existingNote.note.includes(noteText)) {
+                            await prisma.dailyNote.update({
+                                where: { id: existingNote.id },
+                                data: { note: existingNote.note + ' ' + noteText }
+                            });
+                        }
+                    } else {
+                        await prisma.dailyNote.create({
+                            data: { clientId: gf.clientId, empId, dateStr, note: noteText }
+                        });
+                    }
+                } catch(err) { console.error("Err adding daily note", err); }
+            }
+
             try {
                 const tzDate = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Jerusalem' }));
                 tzDate.setHours(0,0,0,0);

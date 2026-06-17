@@ -559,10 +559,16 @@
                         setBtnState(true);
                         Swal.fire({ icon: 'success', title: 'OK', text: i18n[currentLang].msg_in_success, timer: 2000, showConfirmButton: false });
                     } else {
-                        const duration = formatDuration(new Date() - shiftStartTime);
+                        const duration = r.todayHours ? r.todayHours.toFixed(2) : (formatDuration(new Date() - shiftStartTime));
                         shiftStartTime = null;
                         setBtnState(false);
-                        Swal.fire({ icon: 'success', title: 'OK', text: i18n[currentLang].msg_out_success + duration, timer: 3000, showConfirmButton: false });
+                        
+                        let finalMsg = i18n[currentLang].msg_out_success + duration;
+                        if (currentLang === 'ru') {
+                            finalMsg = `Сегодня отработано: ${duration} часов. Спасибо за Ваше время!`;
+                        }
+                        
+                        Swal.fire({ icon: 'success', title: 'OK', text: finalMsg, timer: 6000, showConfirmButton: false });
                     }
                 } else {
                     if (r.error === 'Вы вне зоны объекта!') {

@@ -868,7 +868,7 @@ app.get('/api/client/hours', authClient, async (req, res) => {
                 const inTime = s[s.length-1].in;
                 const shiftDateKey = inTime.toISOString().split('T')[0];
                 const isManualShift = s[s.length-1].inManual;
-                const shiftStr = `${inTime.toLocaleTimeString('ru-RU', {hour: '2-digit', minute:'2-digit', timeZone: 'Asia/Jerusalem'})} - В процессе${isManualShift ? '*' : ''}`;
+                const shiftStr = `${inTime.toLocaleTimeString('ru-RU', {hour: '2-digit', minute:'2-digit', timeZone: 'Asia/Jerusalem'})} - Active${isManualShift ? '*' : ''}`;
                 if (empDaily[empId] && empDaily[empId][shiftDateKey]) {
                     empDaily[empId][shiftDateKey].shifts.push(shiftStr);
                 }
@@ -1185,7 +1185,32 @@ app.post('/api/worker/log', async (req, res) => {
             }
         });
 
-        res.json({ success: true });
+        let todayHours = 0;
+        if (action === 'Выход') {
+            try {
+                const tzDate = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Jerusalem' }));
+                tzDate.setHours(0,0,0,0);
+                
+                const todayLogs = await prisma.log.findMany({
+                    where: { empId, dateTime: { gte: tzDate } },
+                    orderBy: { dateTime: 'asc' }
+                });
+                
+                let lastIn = null;
+                for (const l of todayLogs) {
+                    if (l.action === 'Вход' || l.action === 'Авто-Продолжение') {
+                        lastIn = l.dateTime;
+                    } else if (l.action === 'Выход' || l.action === 'Авто-Пауза') {
+                        if (lastIn) {
+                            todayHours += (l.dateTime - lastIn) / 3600000;
+                            lastIn = null;
+                        }
+                    }
+                }
+            } catch(err) { console.error("Err calculating todayHours", err); }
+        }
+
+        res.json({ success: true, todayHours });
     } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
@@ -1247,3 +1272,49 @@ if (require.main === module) {
 }
 
 module.exports = app;
+
+app.post('/api/client/employees/:id/force-exit', authClient, async (req, res) => {
+    try {
+        const empId = req.params.id;
+        const geofence = await prisma.geofence.findFirst({ where: { empId, clientId: req.user.clientId } });
+        if (!geofence) return res.status(404).json({ success: false, error: 'Работник не найден' });
+        
+        // Add "Выход" log
+        await prisma.log.create({
+            data: {
+                empId,
+                geofenceId: geofence.id,
+                action: 'Выход',
+                isManual: true,
+                dateTime: new Date()
+            }
+        });
+        
+        // Add to daily notes
+        const tzDate = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Jerusalem' }));
+        const todayStr = tzDate.getFullYear() + '-' + String(tzDate.getMonth()+1).padStart(2,'0') + '-' + String(tzDate.getDate()).padStart(2,'0');
+        
+        const existingNote = await prisma.dailyNote.findFirst({
+            where: { clientId: req.user.clientId, empId, date: todayStr }
+        });
+        
+        const noteMsg = 'Смена прервана руководителем';
+        if (existingNote) {
+            if (!existingNote.noteText.includes(noteMsg)) {
+                await prisma.dailyNote.update({
+                    where: { id: existingNote.id },
+                    data: { noteText: existingNote.noteText + ' (' + noteMsg + ')' }
+                });
+            }
+        } else {
+            await prisma.dailyNote.create({
+                data: { clientId: req.user.clientId, empId, date: todayStr, noteText: noteMsg }
+            });
+        }
+        
+        res.json({ success: true });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false, error: e.message });
+    }
+});

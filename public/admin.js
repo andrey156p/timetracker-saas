@@ -784,6 +784,7 @@ async function renderClientWorkers() {
                 <button onclick="openNotesModal('${e.empId}')" class="text-purple-600 underline text-xs mr-2 font-bold">Примечания</button><br>
                 <button onclick="editWorker('${e.empId}')" class="text-blue-600 underline text-xs mr-2" data-i18n="edit"></button>
                 <button onclick="deleteWorker('${e.empId}')" class="text-red-600 underline text-xs" data-i18n="delete"></button>
+                ${e.isOnline ? `<button onclick="forceExitWorker('${e.empId}')" class="text-orange-600 underline text-xs ml-2 font-bold" title="Принудительно завершить смену">Завершить</button>` : ''}
             </td>
         </tr>`;
     });
@@ -2068,3 +2069,19 @@ async function generateCSVReport() {
     btn.textContent = originalText;
     btn.disabled = false;
 }
+
+window.forceExitWorker = async function(empId) {
+    if (!confirm('Вы уверены, что хотите принудительно завершить смену этому сотруднику?')) return;
+    try {
+        const res = await fetch(`${API_URL}/client/employees/${empId}/force-exit`, { method: 'POST', headers: authHeaders() });
+        const r = await res.json();
+        if (r.success) {
+            Swal.fire('Успешно', 'Смена завершена', 'success');
+            renderClientWorkers();
+        } else {
+            Swal.fire('Ошибка', r.error, 'error');
+        }
+    } catch(e) {
+        Swal.fire('Ошибка', e.message, 'error');
+    }
+};

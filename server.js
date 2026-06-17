@@ -144,7 +144,7 @@ app.post('/api/auth/login', async (req, res) => {
         if (!client.isActive) return res.status(403).json({ success: false, error: 'Ваш аккаунт отключен владельцем' });
         
         if (client.trialEndsAt && new Date() > client.trialEndsAt) {
-            return res.status(403).json({ success: false, error: 'Ваш 14-дневный пробный период истек. Пожалуйста, свяжитесь с нами для оплаты подписки.' });
+            return res.status(403).json({ success: false, errorCode: 'TRIAL_EXPIRED', error: 'Ваш 14-дневный пробный период истек. Пожалуйста, свяжитесь с нами для оплаты подписки.' });
         }
 
         const token = jwt.sign({ role: 'client', clientId: client.id }, JWT_SECRET, { expiresIn: '7d' });

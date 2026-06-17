@@ -741,7 +741,12 @@ async function renderClientWorkers() {
         </div>
     </div>
 
-    <h3 class="font-bold mb-2" data-i18n="tab_client_workers"></h3>
+    
+    <div class="flex flex-wrap justify-between items-center mb-2 gap-2">
+        <h3 class="font-bold" data-i18n="tab_client_workers"></h3>
+        <input type="text" oninput="filterWorkersList(this.value)" placeholder="Поиск (Имя, ID, Бригадир)..." class="border p-2 rounded text-sm w-full sm:w-64 focus:outline-none focus:ring-2 focus:ring-blue-400">
+    </div>
+
     <div class="overflow-x-auto w-full pb-2"><table class="w-full text-left border-collapse bg-white shadow rounded">
         <thead><tr class="bg-gray-100 border-b">
             <th class="p-2">ID</th>

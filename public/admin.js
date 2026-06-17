@@ -50,7 +50,7 @@ function showToast(msg, isError=false){
 const i18n = {
     ru: {
         username: "Логин", password: "Пароль", login_btn: "Войти", logout: "Выйти",
-        tab_owner_clients: "Компании (Клиенты)", tab_owner_billing: "Биллинг", tab_owner_invoices: "Счета", tab_owner_pass: "Пароль", tab_owner_hierarchy: "Иерархия",
+        tab_owner_clients: "Компании (Клиенты)", tab_owner_billing: "Биллинг", tab_owner_leads: "Заявки с сайта", tab_owner_invoices: "Счета", tab_owner_pass: "Пароль", tab_owner_hierarchy: "Иерархия",
         tab_client_workers: "Работники", tab_client_shifts: "Отчёты", tab_client_foremen: "Бригадиры", tab_client_analytics: "Аналитика",
         add_foreman: "Создать руководителя", foreman_name: "Имя/Название", foreman_login: "Логин", foreman_pass: "Пароль",
         save: "Сохранить", action: "Действие", block: "Заблокировать", unblock: "Разблокировать",
@@ -74,7 +74,7 @@ const i18n = {
     en: {
         username: "Username", password: "Password", login_btn: "Login", logout: "Logout",
         login_title: "Welcome", login_subtitle: "Enter your details to login", login_desc: "Time tracking for your business",
-        tab_owner_clients: "Managers", tab_owner_billing: "Billing Data", tab_owner_invoices: "Invoices", tab_owner_pass: "Change Password",
+        tab_owner_clients: "Managers", tab_owner_billing: "Billing Data", tab_owner_leads: "Website Leads", tab_owner_invoices: "Invoices", tab_owner_pass: "Change Password",
         tab_client_workers: "Workers", tab_client_shifts: "Shifts",
         add_foreman: "Create Manager", foreman_name: "Name", foreman_login: "Login", foreman_pass: "Password",
         save: "Save", action: "Action", block: "Block", unblock: "Unblock",
@@ -99,7 +99,7 @@ const i18n = {
     he: {
         username: "שם משתמש", password: "סיסמה", login_btn: "התחבר", logout: "התנתק",
         login_title: "ברוך הבא", login_subtitle: "הזן את הפרטים שלך כדי להתחבר", login_desc: "מעקב אחר זמן לעסק שלך",
-        tab_owner_clients: "ניהול מנהלי עבודה", tab_owner_billing: "חיוב", tab_owner_invoices: "חשבונות", tab_owner_pass: "שינוי סיסמה",
+        tab_owner_clients: "ניהול מנהלי עבודה", tab_owner_billing: "חיוב", tab_owner_leads: "לידים", tab_owner_invoices: "חשבונות", tab_owner_pass: "שינוי סיסמה",
         tab_client_workers: "עובדים", tab_client_shifts: "משמרות",
         add_foreman: "צור מנהל עבודה", foreman_name: "שם", foreman_login: "שם משתמש", foreman_pass: "סיסמה",
         save: "שמור", action: "פעולה", block: "חסום", unblock: "בטל חסימה",
@@ -2150,11 +2150,16 @@ async function renderOwnerLeads() {
     r.leads.forEach(l => {
         const dateStr = new Date(l.createdAt).toLocaleString();
         html += `
-        <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between">
-            <div>
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between relative">
+            <button onclick="deleteLead('${l.id}')" class="absolute top-2 right-2 text-red-500 hover:text-red-700 p-1" title="Удалить">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+                </svg>
+            </button>
+            <div class="pr-8">
                 <div class="flex justify-between items-start mb-2">
                     <h3 class="font-bold text-lg text-gray-800">${l.name}</h3>
-                    <span class="text-xs text-gray-400">${dateStr}</span>
+                    <span class="text-xs text-gray-400 block mt-1">${dateStr}</span>
                 </div>
                 <div class="text-sm text-gray-600 mb-1"><strong>Company:</strong> ${l.company}</div>
                 <div class="text-sm text-gray-600 mb-1"><strong>Email:</strong> ${l.email || '-'}</div>
@@ -2184,6 +2189,20 @@ async function saveLeadComment(id) {
         });
         if(res.ok) {
             Swal.fire({ toast: true, position: 'bottom-end', showConfirmButton: false, timer: 2000, icon: 'success', title: 'Saved!' });
+        }
+    } catch(e) {}
+}
+
+
+async function deleteLead(id) {
+    if (!confirm('Вы уверены, что хотите удалить эту заявку? / Are you sure?')) return;
+    try {
+        const res = await fetch(`${API_URL}/admin/leads/${id}`, {
+            method: 'DELETE', headers: authHeaders()
+        });
+        if(res.ok) {
+            Swal.fire({ toast: true, position: 'bottom-end', showConfirmButton: false, timer: 2000, icon: 'success', title: 'Удалено!' });
+            renderOwnerLeads();
         }
     } catch(e) {}
 }

@@ -230,6 +230,14 @@ app.post('/api/admin/leads/:id/comment', authOwner, async (req, res) => {
     } catch(err) { res.status(500).json({ success: false, error: err.message }); }
 });
 
+
+app.delete('/api/admin/leads/:id', authOwner, async (req, res) => {
+    try {
+        await prisma.contactRequest.delete({ where: { id: req.params.id } });
+        res.json({ success: true });
+    } catch(err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
 app.get('/api/admin/clients', authOwner, async (req, res) => {
     const clients = await prisma.client.findMany({ 
         select: { 

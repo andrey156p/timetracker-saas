@@ -267,8 +267,9 @@ function renderTabs() {
         
         // Tab icon
         const icon = document.createElement('div');
-        icon.className = "w-4 h-4 bg-blue-500 rounded-full mr-2 opacity-80 flex-shrink-0";
-        if(userRole === 'owner') icon.classList.replace('bg-blue-500', 'bg-purple-500');
+        const colors = ['bg-blue-500', 'bg-purple-500', 'bg-green-500', 'bg-orange-500', 'bg-pink-500', 'bg-teal-500', 'bg-indigo-500'];
+        const colorClass = colors[tabs.indexOf(tab) % colors.length];
+        icon.className = `w-4 h-4 ${colorClass} rounded-full mr-2 opacity-80 flex-shrink-0`;
         
         const text = document.createElement('span');
         text.className = "truncate max-w-[120px]";

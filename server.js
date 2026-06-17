@@ -1284,6 +1284,7 @@ app.post('/api/client/employees/:id/force-exit', authClient, async (req, res) =>
             data: {
                 empId,
                 geofenceId: geofence.id,
+                clientId: req.user.clientId,
                 action: 'Выход',
                 isManual: true,
                 dateTime: new Date()

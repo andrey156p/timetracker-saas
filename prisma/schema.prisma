@@ -154,5 +154,6 @@ model ContactRequest {
   company   String
   email     String?
   phone     String?
+  comment   String?
   createdAt DateTime @default(now())
 }

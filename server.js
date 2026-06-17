@@ -56,7 +56,17 @@ function authClient(req, res, next) {
         const decoded = jwt.verify(authHeader.split(' ')[1], JWT_SECRET);
         if (decoded.role !== 'client' && decoded.role !== 'foreman') throw new Error();
         req.user = decoded;
-        next();
+
+        const clientIdToCheck = decoded.role === 'client' ? decoded.id : decoded.clientId;
+        prisma.client.findUnique({ where: { id: clientIdToCheck } }).then(client => {
+            if (!client || !client.isActive) return res.status(403).json({ success: false, error: 'Аккаунт заблокирован' });
+            if (client.trialEndsAt && new Date() > client.trialEndsAt) {
+                return res.status(403).json({ success: false, errorCode: 'TRIAL_EXPIRED', error: 'Ваш 14-дневный пробный период истек.' });
+            }
+            next();
+        }).catch(err => {
+            res.status(500).json({ success: false, error: 'DB Error' });
+        });
     } catch(e) { res.status(403).json({ success: false, error: 'Доступ запрещен' }); }
 }
 
@@ -200,6 +210,24 @@ app.post('/api/admin/password', authOwner, async (req, res) => {
     });
     
     res.json({ success: true });
+});
+
+
+app.get('/api/admin/leads', authOwner, async (req, res) => {
+    try {
+        const leads = await prisma.contactRequest.findMany({ orderBy: { createdAt: 'desc' } });
+        res.json({ success: true, leads });
+    } catch(err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+app.post('/api/admin/leads/:id/comment', authOwner, async (req, res) => {
+    try {
+        await prisma.contactRequest.update({
+            where: { id: req.params.id },
+            data: { comment: req.body.comment }
+        });
+        res.json({ success: true });
+    } catch(err) { res.status(500).json({ success: false, error: err.message }); }
 });
 
 app.get('/api/admin/clients', authOwner, async (req, res) => {

@@ -2085,3 +2085,18 @@ window.forceExitWorker = async function(empId) {
         Swal.fire('Ошибка', e.message, 'error');
     }
 };
+
+
+window.filterWorkersList = function(query) {
+    if (!query) query = '';
+    query = query.toLowerCase();
+    const rows = document.querySelectorAll('#workers-list tr');
+    rows.forEach(r => {
+        const text = r.innerText.toLowerCase();
+        if (text.includes(query)) {
+            r.style.display = '';
+        } else {
+            r.style.display = 'none';
+        }
+    });
+};

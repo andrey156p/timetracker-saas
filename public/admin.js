@@ -151,6 +151,7 @@ const ownerTabs = [
     { id: 'owner-clients', titleKey: 'tab_owner_clients', url: 'timetracker.com/owner/clients' },
     { id: 'owner-leads', titleKey: 'tab_owner_leads', url: 'timetracker.com/owner/leads' },
     { id: 'owner-billing', titleKey: 'tab_owner_billing', url: 'timetracker.com/owner/billing' },
+    { id: 'owner-invoices', titleKey: 'tab_owner_invoices', url: 'timetracker.com/owner/invoices' },
     { id: 'owner-pass', titleKey: 'tab_owner_pass', url: 'timetracker.com/owner/settings' }
 ];
 

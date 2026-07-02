@@ -122,6 +122,8 @@ model Invoice {
   startDate DateTime
   endDate   DateTime
   amount    Float
+  workers   Int      @default(0)
+  hours     Float    @default(0.0)
   status    String   @default("pending") // "pending" or "paid"
   createdAt DateTime @default(now())
 }

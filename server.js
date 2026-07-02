@@ -480,13 +480,15 @@ app.get('/api/admin/invoices', authOwner, async (req, res) => {
 
 app.post('/api/admin/invoices', authOwner, async (req, res) => {
     try {
-        const { clientId, startDate, endDate, amount } = req.body;
+        const { clientId, startDate, endDate, amount, workers, hours } = req.body;
         const invoice = await prisma.invoice.create({
             data: {
                 clientId,
                 startDate: new Date(startDate),
                 endDate: new Date(endDate),
-                amount: parseFloat(amount) || 0
+                amount: parseFloat(amount) || 0,
+                workers: parseInt(workers) || 0,
+                hours: parseFloat(hours) || 0
             }
         });
         res.json({ success: true, invoice });

@@ -704,7 +704,7 @@ window.fetch = async function() {
                         Swal.showValidationMessage(i18n[currentLang].expense_req);
                     }
                     let noteText = desc;
-                    if(amt) noteText = `${i18n[currentLang].expense_amt}: ${amt} ₪. ${i18n[currentLang].expense_desc}: ${desc}`;
+                    if(amt) noteText = `${amt} ₪ - ${desc}`;
                     return noteText;
                 }
             });

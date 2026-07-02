@@ -691,8 +691,8 @@ window.fetch = async function() {
             const { value: formValues } = await Swal.fire({
                 title: i18n[currentLang].expense_title,
                 html:
-                    '<input id="swal-expense-amt" type="number" step="0.01" class="swal2-input" placeholder="' + i18n[currentLang].expense_amt + '">' +
-                    '<textarea id="swal-expense-desc" class="swal2-textarea" placeholder="' + i18n[currentLang].expense_desc + '"></textarea>',
+                    '<input id="swal-expense-amt" type="number" step="0.01" class="swal2-input" style="width: 85%; max-width: 100%; margin: 10px auto; font-size: 14px; box-sizing: border-box;" placeholder="' + i18n[currentLang].expense_amt + '">' +
+                    '<textarea id="swal-expense-desc" class="swal2-textarea" style="width: 85%; max-width: 100%; margin: 10px auto; font-size: 14px; box-sizing: border-box;" placeholder="' + i18n[currentLang].expense_desc + '"></textarea>',
                 focusConfirm: false,
                 showCancelButton: true,
                 confirmButtonText: i18n[currentLang].save,
@@ -716,7 +716,7 @@ window.fetch = async function() {
                 try {
                     const res = await fetch(`${API_URL}/worker/notes`, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ empId, date: localDate, noteText: formValues })
                     });
                     const r = await res.json();

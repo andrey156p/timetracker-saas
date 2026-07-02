@@ -141,19 +141,10 @@ window.fetch = async function() {
                 report_btn: "Мои Отчёты", report_title: "Отчёт за месяц", report_total: "Всего часов:",
                 report_night: "Ночные часы:", report_sat: "Часы в субботу:", report_over: "Сверхурочные:",
                 report_dl: "Скачать Отчёт", close: "Закрыть", error: "Ошибка",
-                remind_in: "Не забудьте нажать 'Вход' (смена скоро начнется)!", remind_out: "لا تنس تسجيل الخروج (ينتهي الدوام قريبا)!",
-                expense_btn: "مصاريف", expense_title: "مصروف / ملاحظة",
-                expense_amt: "المبلغ (مثلا 50)", expense_desc: "الوصف (على ماذا أنفق)",
-                expense_req: "الرجاء إدخال الوصف", save: "حفظ", cancel: "إلغاء", saved: "تم الحفظ"יציאה' (המשמרת מסתיימת בקרוב)!",
-                expense_btn: "הוצאות", expense_title: "הוצאה / הערה",
-                expense_amt: "סכום (למשל 50)", expense_desc: "תיאור (על מה שולם)",
-                expense_req: "נא להזין תיאור", save: "שמור", cancel: "ביטול", saved: "נשמר"t forget to Clock Out (shift ends soon)!",
-                expense_btn: "Expenses", expense_title: "Expense / Note",
-                expense_amt: "Amount (e.g. 50)", expense_desc: "Description (what it was for)",
-                expense_req: "Please enter a description", save: "Save", cancel: "Cancel", saved: "Saved"Выход' (смена скоро закончится)!",
-                expense_btn: "Расходы", expense_title: "Расход / Заметка",
+                remind_in: "Не забудьте нажать 'Вход' (смена скоро начнется)!", remind_out: "Не забудьте нажать 'Выход' (смена скоро закончится)!",
+                expense_btn: "Расходы / Заметки", expense_title: "Расход / Заметка",
                 expense_amt: "Сумма (например 50)", expense_desc: "Описание (на что потрачено)",
-                expense_req: "Пожалуйста, введите описание", save: "Сохранить", cancel: "Отмена", saved: "Сохранено"Выход' (смена скоро закончится)!"
+                expense_req: "Пожалуйста, введите описание", save: "Сохранить", cancel: "Отмена", saved: "Сохранено"
             },
             en: {
                 loading: "Loading profile...", error_title: "Access Error",
@@ -166,7 +157,10 @@ window.fetch = async function() {
                 report_btn: "My Reports", report_title: "Monthly Report", report_total: "Total Hours:",
                 report_night: "Night Hours:", report_sat: "Saturday Hours:", report_over: "Overtime:",
                 report_dl: "Download Report", close: "Close", error: "Error",
-                remind_in: "Don't forget to Clock In (shift starts soon)!", remind_out: "Don't forget to Clock Out (shift ends soon)!"
+                remind_in: "Don't forget to Clock In (shift starts soon)!", remind_out: "Don't forget to Clock Out (shift ends soon)!",
+                expense_btn: "Expenses / Notes", expense_title: "Expense / Note",
+                expense_amt: "Amount (e.g. 50)", expense_desc: "Description (what it was for)",
+                expense_req: "Please enter a description", save: "Save", cancel: "Cancel", saved: "Saved"
             },
             he: {
                 loading: "טוען פרופיל...", error_title: "שגיאת גישה",
@@ -175,24 +169,30 @@ window.fetch = async function() {
                 msg_gps_fetch: "מאתר מיקום...", msg_sending: "שולח...",
                 msg_in_success: "משמרת התחילה! בהצלחה.", msg_out_success: "משמרת הסתיימה. זמן כולל: ",
                 err_gps: "גישה למיקום נדחתה", err_network: "שגיאת רשת",
-                req_gps: "אנא אפשר שירותי מיקום כדי להיכנס למשמרת.", req_arrive: "עליך להגיע לאתר העבודה תחילה. המיקום שלך אינו תואם.",
-                report_btn: "הדוחות שלי", report_title: "דוח חודשי", report_total: "סך הכל שעות:",
+                req_gps: "אנא אפשר מיקום כדי לדווח כניסה.", req_arrive: "עליך להגיע תחילה לאתר. המיקום שלך לא תואם.",
+                report_btn: "הדוחות שלי", report_title: "דוח חודשי", report_total: "סה״כ שעות:",
                 report_night: "שעות לילה:", report_sat: "שעות שבת:", report_over: "שעות נוספות:",
                 report_dl: "הורד דוח", close: "סגור", error: "שגיאה",
-                remind_in: "אל תשכח ללחוץ 'כניסה' (המשמרת מתחילה בקרוב)!", remind_out: "אל תשכח ללחוץ 'יציאה' (המשמרת מסתיימת בקרוב)!"
+                remind_in: "אל תשכחו לדווח 'כניסה' (המשמרת מתחילה בקרוב)!", remind_out: "אל תשכחו לדווח 'יציאה' (המשמרת מסתיימת בקרוב)!",
+                expense_btn: "הוצאות / הערות", expense_title: "הוצאה / הערה",
+                expense_amt: "סכום (למשל 50)", expense_desc: "תיאור (על מה שולם)",
+                expense_req: "נא להזין תיאור", save: "שמור", cancel: "ביטול", saved: "נשמר"
             },
             ar: {
-                loading: "جاري تحميل الملف الشخصي...", error_title: "خطأ في الوصول",
-                worker: "عامل", status_ok: "في منطقة العمل", status_mobile: "وضع التنقل",
+                loading: "جاري تحميل الملف...", error_title: "خطأ في الوصول",
+                worker: "عامل", status_ok: "في منطقة العمل", status_mobile: "وضع متنقل",
                 btn_in: "دخول", btn_out: "خروج", current_shift: "مدة الوردية",
-                msg_gps_fetch: "الحصول على GPS...", msg_sending: "إرسال...",
-                msg_in_success: "بدأت الوردية! حظا موفقا.", msg_out_success: "انتهت الوردية. الوقت الإجمالي: ",
-                err_gps: "تم رفض الوصول إلى GPS", err_network: "خطأ في الشبكة",
-                req_gps: "يرجى تمكين GPS لبدء العمل.", req_arrive: "يجب أن تصل إلى موقع العمل أولاً. موقعك لا يطابق الموقع المخصص.",
-                report_btn: "تقاريري", report_title: "تقرير شهري", report_total: "إجمالي الساعات:",
-                report_night: "ساعات ليلية:", report_sat: "ساعات السبت:", report_over: "عمل إضافي:",
+                msg_gps_fetch: "جاري تحديد الموقع...", msg_sending: "جاري الإرسال...",
+                msg_in_success: "بدأت الوردية! بالتوفيق.", msg_out_success: "انتهت الوردية. إجمالي الوقت: ",
+                err_gps: "تم رفض الوصول للموقع", err_network: "خطأ في الشبكة",
+                req_gps: "الرجاء تمكين الموقع لتسجيل الدخول.", req_arrive: "يجب أن تصل إلى موقع العمل أولاً.",
+                report_btn: "تقاريري", report_title: "التقرير الشهري", report_total: "إجمالي الساعات:",
+                report_night: "ساعات الليل:", report_sat: "ساعات السبت:", report_over: "ساعات إضافية:",
                 report_dl: "تحميل التقرير", close: "إغلاق", error: "خطأ",
-                remind_in: "لا تنس النقر على 'دخول' (تبدأ الوردية قريباً)!", remind_out: "لا تنس النقر على 'خروج' (تنتهي الوردية قريباً)!"
+                remind_in: "لا تنس تسجيل الدخول (يبدأ الدوام قريبا)!", remind_out: "لا تنس تسجيل الخروج (ينتهي الدوام قريبا)!",
+                expense_btn: "مصاريف / ملاحظات", expense_title: "مصروف / ملاحظة",
+                expense_amt: "المبلغ (مثلا 50)", expense_desc: "الوصف (على ماذا أنفق)",
+                expense_req: "الرجاء إدخال الوصف", save: "حفظ", cancel: "إلغاء", saved: "تم الحفظ"
             }
         };
 

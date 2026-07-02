@@ -716,7 +716,7 @@ window.fetch = async function() {
                 try {
                     const res = await fetch(`${API_URL}/worker/notes`, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ empId, date: localDate, noteText: formValues })
                     });
                     const r = await res.json();
@@ -727,28 +727,6 @@ window.fetch = async function() {
                     }
                 } catch(e) {
                     Swal.fire({ icon: 'error', title: i18n[currentLang].error });
-                }
-            }
-        });
-
-            if (formValues) {
-                const tzOffset = (new Date()).getTimezoneOffset() * 60000;
-                const localDate = (new Date(Date.now() - tzOffset)).toISOString().split('T')[0];
-                
-                try {
-                    const res = await fetch(`${API_URL}/worker/notes`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', ...authHeaders() },
-                        body: JSON.stringify({ empId, date: localDate, noteText: formValues })
-                    });
-                    const r = await res.json();
-                    if(r.success) {
-                        Swal.fire({ icon: 'success', title: 'Сохранено', timer: 1500, showConfirmButton: false });
-                    } else {
-                        Swal.fire({ icon: 'error', title: r.error });
-                    }
-                } catch(e) {
-                    Swal.fire({ icon: 'error', title: 'Ошибка сети' });
                 }
             }
         }

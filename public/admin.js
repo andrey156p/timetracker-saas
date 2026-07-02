@@ -69,7 +69,7 @@ const i18n = {
         qr_print: "QR / Печать", copy_link: "Копировать линк", reset_pass: "Пароль", tariff: "Тариф",
         per_hour: "За час", per_worker: "За работника в день", block_btn: "Блок", unblock_btn: "Разблок", copied: "Скопировано!",
         qr_scan_text: "Отсканируйте этот код камерой вашего телефона для установки приложения учета времени.",
-        edit: "Изменить", indiv_shifts: "Индивидуальные смены (пусто = глобальные)", save_changes: "Сохранить изменения", cancel: "Отмена"
+        edit: "Изменить", indiv_shifts: "Индивидуальные смены (пусто = глобальные)", save_changes: "Сохранить изменения", cancel: "Отмена", unlock_trial: "Снять ограничение", delete_client: "Удалить компанию"
     },
     en: {
         username: "Username", password: "Password", login_btn: "Login", logout: "Logout",
@@ -94,7 +94,7 @@ const i18n = {
         qr_print: "QR / Print", copy_link: "Copy Link", reset_pass: "Password", tariff: "Tariff",
         per_hour: "Per hour", per_worker: "Per worker (daily)", block_btn: "Block", unblock_btn: "Unblock", copied: "Copied!",
         qr_scan_text: "Scan this code with your phone camera to install the time tracking app.",
-        edit: "Edit", indiv_shifts: "Individual Shifts (empty = global)", save_changes: "Save Changes", cancel: "Cancel"
+        edit: "Edit", indiv_shifts: "Individual Shifts (empty = global)", save_changes: "Save Changes", cancel: "Cancel", unlock_trial: "Remove Trial", delete_client: "Delete Client"
     },
     he: {
         username: "שם משתמש", password: "סיסמה", login_btn: "התחבר", logout: "התנתק",
@@ -125,7 +125,7 @@ const i18n = {
         qr_print: "QR / הדפס", copy_link: "העתק קישור", reset_pass: "סיסמה", tariff: "תעריף",
         per_hour: "לשעה", per_worker: "לעובד ליום", block_btn: "חסום", unblock_btn: "שחרר", copied: "הועתק!",
         qr_scan_text: "סרוק קוד זה במצלמת הטלפון שלך כדי להתקין את אפליקציית מעקב הזמן.",
-        edit: "ערוך", indiv_shifts: "משמרות אישיות (ריק = גלובלי)", save_changes: "שמור שינויים", cancel: "ביטול",
+        edit: "ערוך", indiv_shifts: "משמרות אישיות (ריק = גלובלי)", save_changes: "שמור שינויים", cancel: "ביטול", unlock_trial: "בטל הגבלה", delete_client: "מחק לקוח",
         tab_owner_hierarchy: "היררכיה", tab_client_foremen: "מנהלי עבודה", tab_client_analytics: "ניתוח נתונים"
     }
 };
@@ -377,13 +377,13 @@ async function toggleForeman(id) {
 }
 
 async function unlockTrial(id) {
-    if (!confirm('Отменить триал и сделать аккаунт бессрочным? / Remove trial limit?')) return;
+    if (!confirm('Снять ограничения пробного периода и сделать аккаунт бессрочным? / Remove trial limit?')) return;
     const res = await fetch(`${API_URL}/admin/clients/${id}/unlock`, { method: 'POST', headers: authHeaders() });
     if((await res.json()).success) loadTab('owner-clients');
 }
 
 async function deleteForeman(id) {
-    if (!confirm('Вы уверены, что хотите удалить этого прораба и все его данные (работники, счета, история)? Это действие нельзя отменить! / Are you sure?')) return;
+    if (!confirm('ВНИМАНИЕ! Вы удаляете целую компанию/клиента и ВСЕ их данные (работников, счета, смены). Это действие необратимо! Вы уверены? / Delete client completely?')) return;
     const res = await fetch(`${API_URL}/admin/clients/${id}`, { method: 'DELETE', headers: authHeaders() });
     if((await res.json()).success) loadTab('owner-clients'); else showToast('Ошибка удаления');
 }

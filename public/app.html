@@ -716,7 +716,7 @@ window.fetch = async function() {
                 try {
                     const res = await fetch(`${API_URL}/worker/notes`, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: { 'Content-Type': 'application/json', ...authHeaders() },
                         body: JSON.stringify({ empId, date: localDate, noteText: formValues })
                     });
                     const r = await res.json();

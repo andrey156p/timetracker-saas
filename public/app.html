@@ -143,7 +143,7 @@ window.fetch = async function() {
                 report_dl: "Скачать Отчёт", close: "Закрыть", error: "Ошибка",
                 remind_in: "Не забудьте нажать 'Вход' (смена скоро начнется)!", remind_out: "Не забудьте нажать 'Выход' (смена скоро закончится)!",
                 expense_btn: "Расходы / Заметки", expense_title: "Расход / Заметка",
-                expense_amt: "Сумма (например 50)", expense_desc: "Описание (на что потрачено)",
+                expense_amt: "Сумма", expense_desc: "Описание",
                 expense_req: "Пожалуйста, введите описание", save: "Сохранить", cancel: "Отмена", saved: "Сохранено"
             },
             en: {
@@ -159,7 +159,7 @@ window.fetch = async function() {
                 report_dl: "Download Report", close: "Close", error: "Error",
                 remind_in: "Don't forget to Clock In (shift starts soon)!", remind_out: "Don't forget to Clock Out (shift ends soon)!",
                 expense_btn: "Expenses / Notes", expense_title: "Expense / Note",
-                expense_amt: "Amount (e.g. 50)", expense_desc: "Description (what it was for)",
+                expense_amt: "Amount", expense_desc: "Description",
                 expense_req: "Please enter a description", save: "Save", cancel: "Cancel", saved: "Saved"
             },
             he: {
@@ -175,7 +175,7 @@ window.fetch = async function() {
                 report_dl: "הורד דוח", close: "סגור", error: "שגיאה",
                 remind_in: "אל תשכחו לדווח 'כניסה' (המשמרת מתחילה בקרוב)!", remind_out: "אל תשכחו לדווח 'יציאה' (המשמרת מסתיימת בקרוב)!",
                 expense_btn: "הוצאות / הערות", expense_title: "הוצאה / הערה",
-                expense_amt: "סכום (למשל 50)", expense_desc: "תיאור (על מה שולם)",
+                expense_amt: "סכום", expense_desc: "תיאור",
                 expense_req: "נא להזין תיאור", save: "שמור", cancel: "ביטול", saved: "נשמר"
             },
             ar: {
@@ -191,7 +191,7 @@ window.fetch = async function() {
                 report_dl: "تحميل التقرير", close: "إغلاق", error: "خطأ",
                 remind_in: "لا تنس تسجيل الدخول (يبدأ الدوام قريبا)!", remind_out: "لا تنس تسجيل الخروج (ينتهي الدوام قريبا)!",
                 expense_btn: "مصاريف / ملاحظات", expense_title: "مصروف / ملاحظة",
-                expense_amt: "المبلغ (مثلا 50)", expense_desc: "الوصف (على ماذا أنفق)",
+                expense_amt: "المبلغ", expense_desc: "الوصف",
                 expense_req: "الرجاء إدخال الوصف", save: "حفظ", cancel: "إلغاء", saved: "تم الحفظ"
             }
         };
@@ -704,7 +704,7 @@ window.fetch = async function() {
                         Swal.showValidationMessage(i18n[currentLang].expense_req);
                     }
                     let noteText = desc;
-                    if(amt) noteText = `${i18n[currentLang].expense_btn}: ${amt} ₪. ${i18n[currentLang].expense_desc.split(' ')[0]}: ${desc}`;
+                    if(amt) noteText = `${i18n[currentLang].expense_amt}: ${amt} ₪. ${i18n[currentLang].expense_desc}: ${desc}`;
                     return noteText;
                 }
             });

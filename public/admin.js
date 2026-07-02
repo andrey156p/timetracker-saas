@@ -377,13 +377,13 @@ async function toggleForeman(id) {
 }
 
 async function unlockTrial(id) {
-    if (!confirm('Снять ограничения пробного периода и сделать аккаунт бессрочным? / Remove trial limit?')) return;
+    const result = await Swal.fire({ title: 'Снять ограничения?', text: 'Сделать аккаунт бессрочным? / Remove trial limit?', icon: 'warning', showCancelButton: true, confirmButtonText: 'Да / Yes', cancelButtonText: 'Отмена / Cancel' }); if (!result.isConfirmed) return;
     const res = await fetch(`${API_URL}/admin/clients/${id}/unlock`, { method: 'POST', headers: authHeaders() });
     if((await res.json()).success) loadTab('owner-clients');
 }
 
 async function deleteForeman(id) {
-    if (!confirm('ВНИМАНИЕ! Вы удаляете целую компанию/клиента и ВСЕ их данные (работников, счета, смены). Это действие необратимо! Вы уверены? / Delete client completely?')) return;
+    const result = await Swal.fire({ title: 'ВНИМАНИЕ! Вы удаляете целую компанию/клиента', text: 'ВСЕ их данные (работники, счета, смены) будут удалены. Это действие необратимо! Вы уверены? / Delete client completely?', icon: 'error', showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: 'Да, УДАЛИТЬ', cancelButtonText: 'Отмена / Cancel' }); if (!result.isConfirmed) return;
     const res = await fetch(`${API_URL}/admin/clients/${id}`, { method: 'DELETE', headers: authHeaders() });
     if((await res.json()).success) loadTab('owner-clients'); else showToast('Ошибка удаления');
 }
@@ -563,7 +563,7 @@ async function toggleInvoiceStatus(id) {
 }
 
 async function deleteInvoice(id) {
-    if (!confirm('Удалить этот счёт? / Delete this invoice?')) return;
+    const result = await Swal.fire({ title: 'Удалить этот счёт?', text: 'Delete this invoice?', icon: 'warning', showCancelButton: true, confirmButtonText: 'Удалить / Delete', cancelButtonText: 'Отмена / Cancel' }); if (!result.isConfirmed) return;
     const res = await fetch(`${API_URL}/admin/invoices/${id}`, { method: 'DELETE', headers: authHeaders() });
     if((await res.json()).success) renderOwnerInvoices();
 }
@@ -1047,7 +1047,7 @@ function cancelEditWorker() {
 }
 
 async function deleteWorker(empId) {
-    if(!confirm("Удалить?")) return;
+    const result = await Swal.fire({ title: 'Удалить?', icon: 'warning', showCancelButton: true, confirmButtonText: 'Удалить / Delete', cancelButtonText: 'Отмена / Cancel' }); if (!result.isConfirmed) return;
     const res = await fetch(`${API_URL}/client/employees/${empId}`, { method: 'DELETE', headers: authHeaders() });
     if((await res.json()).success) renderClientWorkers();
 }
@@ -1585,7 +1585,7 @@ async function toggleForeman(id) {
 }
 
 async function deleteForeman(id) {
-    if(!confirm("Удалить бригадира?")) return;
+    const result = await Swal.fire({ title: 'Удалить бригадира?', icon: 'warning', showCancelButton: true, confirmButtonText: 'Удалить / Delete', cancelButtonText: 'Отмена / Cancel' }); if (!result.isConfirmed) return;
     const res = await fetch(`${API_URL}/client/foremen/${id}`, { method: 'DELETE', headers: authHeaders() });
     if((await res.json()).success) renderClientForemen();
 }
@@ -2109,7 +2109,7 @@ async function generateCSVReport() {
 }
 
 window.forceExitWorker = async function(empId) {
-    if (!confirm('Вы уверены, что хотите принудительно завершить смену этому сотруднику?')) return;
+    const result = await Swal.fire({ title: 'Завершить смену?', text: 'Вы уверены, что хотите принудительно завершить смену этому сотруднику?', icon: 'warning', showCancelButton: true, confirmButtonText: 'Завершить', cancelButtonText: 'Отмена' }); if (!result.isConfirmed) return;
     try {
         const res = await fetch(`${API_URL}/client/employees/${empId}/force-exit`, { method: 'POST', headers: authHeaders() });
         const r = await res.json();
@@ -2196,7 +2196,7 @@ async function saveLeadComment(id) {
 
 
 async function deleteLead(id) {
-    if (!confirm('Вы уверены, что хотите удалить эту заявку? / Are you sure?')) return;
+    const result = await Swal.fire({ title: 'Удалить заявку?', text: 'Are you sure?', icon: 'warning', showCancelButton: true, confirmButtonText: 'Удалить / Delete', cancelButtonText: 'Отмена / Cancel' }); if (!result.isConfirmed) return;
     try {
         const res = await fetch(`${API_URL}/admin/leads/${id}`, {
             method: 'DELETE', headers: authHeaders()

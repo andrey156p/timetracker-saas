@@ -213,7 +213,14 @@ window.fetch = async function() {
         async function init() {
             setLang(currentLang);
             if (!empId) {
-                empId = prompt("Enter ID / Введите ваш ID (телефон):");
+                const { value: idVal } = await Swal.fire({
+                    title: 'Ваш ID',
+                    text: 'Введите ваш ID (телефон) / Enter ID',
+                    input: 'text',
+                    showCancelButton: true,
+                    cancelButtonText: 'Отмена'
+                });
+                empId = idVal;
                 if (!empId) return showError("ID required");
                 localStorage.setItem('empId', empId);
             }

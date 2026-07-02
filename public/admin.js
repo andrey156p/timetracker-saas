@@ -2091,7 +2091,7 @@ async function generateCSVReport() {
             csvContent += `סה״כ שעות שבת,${sumSat.toFixed(2)}\n\n`;
         }
 
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;

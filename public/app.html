@@ -8,7 +8,33 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com">
+        async function addDailyNote() {
+            const { value: noteText } = await Swal.fire({
+                title: 'Заметки / Расходы',
+                text: 'Укажите расходы за сегодня (например: Проезд 50)',
+                input: 'textarea',
+                inputPlaceholder: 'Введите текст...',
+                showCancelButton: true,
+                confirmButtonText: 'Сохранить',
+                cancelButtonText: 'Отмена'
+            });
+            
+            if (noteText) {
+                try {
+                    const res = await fetch('/api/worker/notes', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ empId, noteText })
+                    });
+                    if (res.ok) {
+                        Swal.fire({ toast: true, position: 'bottom-end', showConfirmButton: false, timer: 2000, icon: 'success', title: 'Сохранено!' });
+                    }
+                } catch(e) {}
+            }
+        }
+
+    </script>
     <script>
 
 // Global fetch interceptor for TRIAL_EXPIRED
@@ -556,7 +582,7 @@ window.fetch = async function() {
             }, 60000); // Check every minute
         }
 
-        async function logTime(action) {
+        async function logTime(action, isAuto = false) {
             // Prevent double taps
             if (action === 'Вход' && shiftStartTime) return;
             if (action === 'Выход' && !shiftStartTime) return;

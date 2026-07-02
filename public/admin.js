@@ -2207,3 +2207,25 @@ async function deleteLead(id) {
         }
     } catch(e) {}
 }
+
+
+async function searchAddressCoords() {
+    const query = document.getElementById('w-search').value;
+    if (!query) return;
+    document.getElementById('w-search').disabled = true;
+    try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
+        const data = await res.json();
+        if (data && data.length > 0) {
+            document.getElementById('w-lat').value = parseFloat(data[0].lat).toFixed(6);
+            document.getElementById('w-lng').value = parseFloat(data[0].lon).toFixed(6);
+            document.getElementById('w-addr').value = data[0].display_name;
+            Swal.fire({ toast: true, position: 'bottom-end', showConfirmButton: false, timer: 2000, icon: 'success', title: 'Найдено!' });
+        } else {
+            showToast("Адрес не найден / Address not found", true);
+        }
+    } catch (e) {
+        showToast("Ошибка поиска / Search Error", true);
+    }
+    document.getElementById('w-search').disabled = false;
+}

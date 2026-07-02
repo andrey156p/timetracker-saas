@@ -703,12 +703,11 @@ async function renderClientWorkers() {
         <div class="flex flex-wrap gap-2 items-end">
             <div><label class="text-xs text-gray-500">ID (phone)</label><input id="w-id" class="border p-1 rounded w-24"></div>
             <div><label class="text-xs text-gray-500" data-i18n="worker_name"></label><input id="w-name" class="border p-1 rounded"></div>
-            <div><label class="text-xs text-gray-500" data-i18n="lat"></label><input id="w-lat" class="border p-1 rounded w-24" onchange="fetchAddress()"></div>
-            <div><label class="text-xs text-gray-500" data-i18n="lng"></label><input id="w-lng" class="border p-1 rounded w-24" onchange="fetchAddress()"></div>
-            <button onclick="getMyLocation()" class="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded border border-blue-300" data-i18n="get_my_loc"></button>
-            <button onclick="fetchAddress()" class="bg-gray-200 text-xs px-2 py-1 rounded" data-i18n="geocode"></button>
-            <div class="w-full"></div>
-            <div><label class="text-xs text-gray-500" data-i18n="address"></label><input id="w-addr" class="border p-1 rounded w-64 bg-gray-50" readonly></div>
+            <input type="hidden" id="w-lat">
+            <input type="hidden" id="w-lng">
+            <div><label class="text-xs text-gray-500" data-i18n="address">Адрес / Поиск</label><input id="w-addr" class="border p-1 rounded w-64 bg-white" placeholder="Введите адрес..."></div>
+            <button onclick="searchAddressCoords()" id="btn-search-addr" class="bg-indigo-600 text-white text-xs px-2 py-1 rounded shadow">Найти координаты</button>
+            <button onclick="getMyLocation()" class="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded border border-blue-300" data-i18n="get_my_loc">Моя локация</button>
             <div><label class="text-xs text-gray-500" data-i18n="rad"></label><input id="w-rad" class="border p-1 rounded w-20" value="500"></div>
             <div class="flex items-center mb-1"><input type="checkbox" id="w-mob" class="mr-1"><label class="text-xs" data-i18n="mobile"></label></div>
             <div class="flex items-center mb-1 ml-4"><input type="checkbox" id="w-strict-gps" class="mr-1"><label class="text-xs text-red-600 font-bold">Строгий GPS</label></div>
@@ -2210,9 +2209,10 @@ async function deleteLead(id) {
 
 
 async function searchAddressCoords() {
-    const query = document.getElementById('w-search').value;
+    const query = document.getElementById('w-addr').value;
     if (!query) return;
-    document.getElementById('w-search').disabled = true;
+    const btn = document.getElementById('btn-search-addr');
+    if(btn) btn.disabled = true;
     try {
         const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
         const data = await res.json();
@@ -2227,5 +2227,5 @@ async function searchAddressCoords() {
     } catch (e) {
         showToast("Ошибка поиска / Search Error", true);
     }
-    document.getElementById('w-search').disabled = false;
+    if(btn) btn.disabled = false;
 }

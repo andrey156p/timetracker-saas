@@ -336,7 +336,7 @@ async function renderOwnerClients() {
     `;
     r.clients.forEach(c => {
         let currentTariffStr = c.tariffMode === 'per_hour' ? `${i18n[currentLang].per_hour} (${c.pricePerHour} ₪)` : `${i18n[currentLang].per_worker} (${c.pricePerUser} ₪)`;
-        let trialStr = c.trialEndsAt ? new Date(c.trialEndsAt).toLocaleDateString() : 'Бессрочный';
+        let trialStr = c.trialEndsAt ? new Date(c.trialEndsAt).toLocaleDateString('en-GB') : 'Бессрочный';
         if (c.trialEndsAt && new Date() > new Date(c.trialEndsAt)) {
             trialStr = `<span class="text-red-500 font-bold">Истек</span>`;
         }
@@ -534,8 +534,8 @@ async function renderOwnerInvoices() {
             <th class="p-2 text-center" data-i18n="action">Действие</th>
         </tr></thead><tbody>`;
     r.invoices.forEach(inv => {
-        const start = new Date(inv.startDate).toLocaleDateString();
-        const end = new Date(inv.endDate).toLocaleDateString();
+        const start = new Date(inv.startDate).toLocaleDateString('en-GB');
+        const end = new Date(inv.endDate).toLocaleDateString('en-GB');
         const isPaid = inv.status === 'paid';
         const statusHtml = isPaid ? `<span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold" data-i18n="paid">ОПЛАЧЕН</span>` : `<span class="bg-red-100 text-red-700 px-2 py-1 rounded text-xs font-bold" data-i18n="pending">ОЖИДАЕТ</span>`;
         
@@ -600,7 +600,7 @@ function printInvoice(id, clientName, start, end, amount, workers, hours) {
                 <p style="color: #64748b; margin-top: 5px;">#${id}</p>
             </div>
             <div class="invoice-meta text-right">
-                <p><strong>Дата выставления:</strong> ${new Date().toLocaleDateString()}</p>
+                <p><strong>Дата выставления:</strong> ${new Date().toLocaleDateString('en-GB')}</p>
                 <p><strong>Период:</strong> ${start} - ${end}</p>
             </div>
         </div>
@@ -2227,7 +2227,7 @@ async function renderOwnerLeads() {
     html += `<div class="grid md:grid-cols-2 gap-4">`;
     
     r.leads.forEach(l => {
-        const dateStr = new Date(l.createdAt).toLocaleString();
+        const dateStr = new Date(l.createdAt).toLocaleString('en-GB');
         html += `
         <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between relative">
             <button onclick="deleteLead('${l.id}')" class="absolute top-2 right-2 text-red-500 hover:text-red-700 p-1" title="Удалить">

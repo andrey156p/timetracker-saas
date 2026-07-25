@@ -2035,7 +2035,7 @@ async function generatePDFReport() {
             const grossTotal = sumTotal + sumLunch;
 
             const html = `
-                <div style="font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; direction: ${isRtl ? 'rtl' : 'ltr'}; padding: 40px; color: #1f2937; background: #fff;">
+                <div style="width: 800px; font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; direction: ${isRtl ? 'rtl' : 'ltr'}; padding: 40px; color: #1f2937; background: #fff;">
                     <h2 style="font-size: 24px; color: #1e3a8a; border-bottom: 2px solid #3b82f6; padding-bottom: 10px; margin-bottom: 20px;">
                         ${reportTitle}
                     </h2>
@@ -2103,8 +2103,11 @@ async function generatePDFReport() {
             container.innerHTML = html;
             document.body.appendChild(container); // attach to body temporarily
             container.style.position = 'absolute';
-            container.style.left = '-9999px';
-            container.style.top = '-9999px';
+            container.style.left = '0';
+            container.style.top = '0';
+            container.style.zIndex = '-9999';
+            container.style.opacity = '0';
+            container.style.pointerEvents = 'none';
 
             const opt = {
                 margin:       10,

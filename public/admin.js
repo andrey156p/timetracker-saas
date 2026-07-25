@@ -1405,9 +1405,21 @@ async function loadClientHours() {
                         </tr></thead><tbody>`;
                 
                 grp.rows.forEach(d => {
+                    // pre-calculate simplified current times for the editor
+                    let firstIn = '', lastOut = '';
+                    if (d.times) {
+                        const splits = d.times.split(', ');
+                        if(splits.length > 0) {
+                            const firstMatch = splits[0].match(/(\d{2}:\d{2})/);
+                            const lastMatch = splits[splits.length-1].match(/- (\d{2}:\d{2})/);
+                            if(firstMatch) firstIn = firstMatch[1];
+                            if(lastMatch) lastOut = lastMatch[1];
+                        }
+                    }
+
                     html += `<tr class="border-b hover:bg-gray-50">
                         <td class="p-2 text-gray-500">${d.date || '-'}</td>
-                        <td class="p-2 text-gray-600 font-mono text-xs">${d.times || '-'}</td>
+                        <td class="p-2 text-blue-600 font-mono text-xs cursor-pointer hover:underline" onclick="editManualShift('${d.empId}', '${d.date}', '${firstIn}', '${lastOut}')" title="Кликните чтобы изменить время">${d.times || '-'}</td>
                         <td class="p-2 font-bold text-blue-600">${formatHM(parseFloat(d.totalHours || 0))}</td>
                         <td class="p-2 text-indigo-600">${formatHM(parseFloat(d.nightHours || 0))}</td>
                         <td class="p-2 text-purple-600">${formatHM(parseFloat(d.saturdayHours || 0))}</td>
@@ -1427,6 +1439,58 @@ async function loadClientHours() {
     } catch(e) {
         document.getElementById('client-hours-results').innerHTML = `<div class="text-red-500 p-4">Критическая ошибка: ${e.message}</div>`;
         showToast(`Критическая ошибка: ${e.message}`);
+    }
+}
+
+async function editManualShift(empId, date, currentIn, currentOut) {
+    const { value: formValues } = await Swal.fire({
+        title: 'Редактировать смену',
+        html: `
+            <div class="mb-4 text-sm text-gray-600">Дата: <b>${date}</b> (ID: ${empId})</div>
+            <p class="text-xs text-red-500 mb-2">Внимание: ручное изменение перезапишет все существующие смены (если их несколько) на одну новую ручную смену за этот день!</p>
+            <div class="flex flex-col space-y-3 text-left">
+                <div>
+                    <label class="block text-sm font-bold mb-1">Время Входа (HH:MM)</label>
+                    <input id="swal-in" type="time" class="w-full border p-2 rounded" value="${currentIn}">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold mb-1">Время Выхода (HH:MM)</label>
+                    <input id="swal-out" type="time" class="w-full border p-2 rounded" value="${currentOut}">
+                </div>
+            </div>
+        `,
+        focusConfirm: false,
+        showCancelButton: true,
+        confirmButtonText: 'Сохранить',
+        cancelButtonText: 'Отмена',
+        preConfirm: () => {
+            const timeIn = document.getElementById('swal-in').value;
+            const timeOut = document.getElementById('swal-out').value;
+            if (!timeIn || !timeOut) {
+                Swal.showValidationMessage('Укажите оба времени');
+                return null;
+            }
+            return { timeIn, timeOut };
+        }
+    });
+
+    if (formValues) {
+        try {
+            const res = await fetch(`${API_URL}/client/logs/manual`, {
+                method: 'POST',
+                headers: authHeaders(),
+                body: JSON.stringify({ empId, date, timeIn: formValues.timeIn, timeOut: formValues.timeOut })
+            });
+            const r = await res.json();
+            if (r.success) {
+                Swal.fire('Успешно', 'Смена обновлена вручную', 'success');
+                renderClientHours(); // refresh table
+            } else {
+                Swal.fire('Ошибка', r.error || 'Не удалось обновить смену', 'error');
+            }
+        } catch(e) {
+            Swal.fire('Ошибка', e.message, 'error');
+        }
     }
 }
 
@@ -1936,6 +2000,24 @@ async function generatePDFReport() {
     const startStr = new Date(startDate.getTime() - startDate.getTimezoneOffset() * 60000).toISOString();
     const endStr = new Date(endDate.getTime() - endDate.getTimezoneOffset() * 60000).toISOString();
 
+    const { value: selectedLang } = await Swal.fire({
+        title: 'Язык отчёта / Report Language',
+        text: 'Выберите язык для генерации PDF-отчёта:',
+        icon: 'question',
+        input: 'radio',
+        inputOptions: {
+            'he': 'עברית (Hebrew) - Рекомендуется для клиентов',
+            'ru': 'Русский (Russian)',
+            'en': 'English'
+        },
+        inputValue: 'he',
+        showCancelButton: true,
+        confirmButtonText: 'Создать / Generate',
+        cancelButtonText: 'Отмена / Cancel'
+    });
+
+    if (!selectedLang) return;
+
     const btn = document.getElementById('btn-generate-pdf');
     const originalText = btn.textContent;
     btn.textContent = 'Generating...';
@@ -1967,25 +2049,31 @@ async function generatePDFReport() {
             workers[row.empId].rows.push(row);
         });
 
-        const isRtl = currentLang === 'he' || currentLang === 'ar';
+        const isRtl = selectedLang === 'he' || selectedLang === 'ar';
         const alignDir = isRtl ? 'right' : 'left';
         
-        const t_date = i18n[currentLang].date || 'Date';
-        const t_day = currentLang === 'he' ? 'יום' : (currentLang === 'ru' ? 'День' : 'Day');
-        const t_in = currentLang === 'he' ? 'כניסה' : (currentLang === 'ru' ? 'Вход' : 'In');
-        const t_out = currentLang === 'he' ? 'יציאה' : (currentLang === 'ru' ? 'Выход' : 'Out');
-        const t_lunch = currentLang === 'he' ? 'הפסקת צהריים' : (currentLang === 'ru' ? 'Перерыв' : 'Lunch Ded.');
-        const t_over = i18n[currentLang].overtime_hours || 'Overtime';
-        const t_night = i18n[currentLang].night_hours || 'Night';
-        const t_sat = i18n[currentLang].saturday_hours || 'Saturday';
-        const t_total = currentLang === 'he' ? 'סה"כ שעות' : (currentLang === 'ru' ? 'Итого часов' : 'Total Hrs');
-        const t_notes = currentLang === 'he' ? 'הערות' : (currentLang === 'ru' ? 'Заметки' : 'Notes');
+        const t_date = selectedLang === 'he' ? 'תאריך' : (selectedLang === 'ru' ? 'Дата' : 'Date');
+        const t_day = selectedLang === 'he' ? 'יום' : (selectedLang === 'ru' ? 'День' : 'Day');
+        const t_in = selectedLang === 'he' ? 'כניסה' : (selectedLang === 'ru' ? 'Вход' : 'In');
+        const t_out = selectedLang === 'he' ? 'יציאה' : (selectedLang === 'ru' ? 'Выход' : 'Out');
+        const t_lunch = selectedLang === 'he' ? 'הפסקת צהריים' : (selectedLang === 'ru' ? 'Перерыв' : 'Lunch Ded.');
+        const t_over = selectedLang === 'he' ? 'שעות נוספות' : (selectedLang === 'ru' ? 'Сверхурочные' : 'Overtime');
+        const t_night = selectedLang === 'he' ? 'שעות לילה' : (selectedLang === 'ru' ? 'Ночные' : 'Night');
+        const t_sat = selectedLang === 'he' ? 'שבת' : (selectedLang === 'ru' ? 'Суббота' : 'Saturday');
+        const t_total = selectedLang === 'he' ? 'סה"כ שעות' : (selectedLang === 'ru' ? 'Итого часов' : 'Total Hrs');
+        const t_notes = selectedLang === 'he' ? 'הערות' : (selectedLang === 'ru' ? 'Заметки' : 'Notes');
 
         const managerName = r.clientName || 'Manager';
-        const reportTitle = currentLang === 'he' ? 'דוח שעות חודשי' : (currentLang === 'ru' ? 'Ежемесячный отчёт' : 'Monthly Timesheet Report');
-        const l_worker = currentLang === 'he' ? 'עובד' : (currentLang === 'ru' ? 'Работник' : 'Worker');
-        const l_manager = currentLang === 'he' ? 'מנהל עבודה' : (currentLang === 'ru' ? 'Руководитель' : 'Manager');
-        const l_month = currentLang === 'he' ? 'חודש' : (currentLang === 'ru' ? 'Месяц' : 'Month');
+        const reportTitle = selectedLang === 'he' ? 'דוח שעות חודשי' : (selectedLang === 'ru' ? 'Ежемесячный отчёт' : 'Monthly Timesheet Report');
+        const l_worker = selectedLang === 'he' ? 'עובד' : (selectedLang === 'ru' ? 'Работник' : 'Worker');
+        const l_manager = selectedLang === 'he' ? 'מנהל עבודה' : (selectedLang === 'ru' ? 'Руководитель' : 'Manager');
+        const l_month = selectedLang === 'he' ? 'חודש' : (selectedLang === 'ru' ? 'Месяц' : 'Month');
+        const l_total_gross = selectedLang === 'he' ? 'סה"כ שעות ברוטו:' : (selectedLang === 'ru' ? 'Всего часов (Брутто):' : 'Total Hours (Gross):');
+        const l_total_net = selectedLang === 'he' ? 'סה"כ לאחר קיזוז הפסקה:' : (selectedLang === 'ru' ? 'Всего после вычета перерывов:' : 'Total After Lunch Deduction:');
+        const l_total_over = selectedLang === 'he' ? 'סה"כ שעות נוספות:' : (selectedLang === 'ru' ? 'Итого сверхурочные:' : 'Total Overtime:');
+        const l_total_night = selectedLang === 'he' ? 'סה"כ שעות לילה:' : (selectedLang === 'ru' ? 'Итого ночные:' : 'Total Night Hours:');
+        const l_total_sat = selectedLang === 'he' ? 'סה"כ שעות שבת:' : (selectedLang === 'ru' ? 'Итого суббота:' : 'Total Saturday Hours:');
+        const l_sig = selectedLang === 'he' ? 'חתימה' : (selectedLang === 'ru' ? 'Подпись' : 'Signature');
 
         for (const [empId, data] of Object.entries(workers)) {
             let sumTotal = 0, sumOvertime = 0, sumNight = 0, sumSat = 0, sumLunch = 0;
@@ -1996,7 +2084,7 @@ async function generatePDFReport() {
                 const daysEn = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
                 const daysRu = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
                 const daysHe = ["א'", "ב'", "ג'", "ד'", "ה'", "ו'", "ש'"];
-                const dayName = currentLang === 'he' ? daysHe[dDate.getDay()] : (currentLang === 'ru' ? daysRu[dDate.getDay()] : daysEn[dDate.getDay()]);
+                const dayName = selectedLang === 'he' ? daysHe[dDate.getDay()] : (selectedLang === 'ru' ? daysRu[dDate.getDay()] : daysEn[dDate.getDay()]);
                 
                 let startTimes = [], endTimes = [];
                 if (r.times) {
@@ -2011,7 +2099,7 @@ async function generatePDFReport() {
                 }
 
                 rowsHtml += `
-                    <tr style="border-bottom: 1px solid #e5e7eb;">
+                    <tr style="border-bottom: 1px solid #e5e7eb; page-break-inside: avoid;">
                         <td style="padding: 8px;">${r.date.split('-').reverse().join('.')}</td>
                         <td style="padding: 8px;">${dayName}</td>
                         <td style="padding: 8px;">${startTimes.join('<br>') || '-'}</td>
@@ -2035,7 +2123,7 @@ async function generatePDFReport() {
             const grossTotal = sumTotal + sumLunch;
 
             const html = `
-                <div style="width: 800px; font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; direction: ${isRtl ? 'rtl' : 'ltr'}; padding: 40px; color: #1f2937; background: #fff;">
+                <div style="width: 100%; box-sizing: border-box; font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; direction: ${isRtl ? 'rtl' : 'ltr'}; padding: 40px; color: #1f2937; background: #fff;">
                     <h2 style="font-size: 24px; color: #1e3a8a; border-bottom: 2px solid #3b82f6; padding-bottom: 10px; margin-bottom: 20px;">
                         ${reportTitle}
                     </h2>
@@ -2052,17 +2140,17 @@ async function generatePDFReport() {
                     
                     <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 11px; text-align: ${alignDir};">
                         <thead>
-                            <tr style="background-color: #3b82f6; color: white;">
-                                <th style="padding: 8px; border: 1px solid #2563eb;">${t_date}</th>
-                                <th style="padding: 8px; border: 1px solid #2563eb;">${t_day}</th>
-                                <th style="padding: 8px; border: 1px solid #2563eb;">${t_in}</th>
-                                <th style="padding: 8px; border: 1px solid #2563eb;">${t_out}</th>
-                                <th style="padding: 8px; border: 1px solid #2563eb;">${t_lunch}</th>
-                                <th style="padding: 8px; border: 1px solid #2563eb;">${t_over}</th>
-                                <th style="padding: 8px; border: 1px solid #2563eb;">${t_night}</th>
-                                <th style="padding: 8px; border: 1px solid #2563eb;">${t_sat}</th>
-                                <th style="padding: 8px; border: 1px solid #2563eb;">${t_total}</th>
-                                <th style="padding: 8px; border: 1px solid #2563eb;">${t_notes}</th>
+                            <tr style="background-color: #f3f4f6; color: #111827; border-bottom: 2px solid #9ca3af;">
+                                <th style="padding: 8px; border: 1px solid #d1d5db;">${t_date}</th>
+                                <th style="padding: 8px; border: 1px solid #d1d5db;">${t_day}</th>
+                                <th style="padding: 8px; border: 1px solid #d1d5db;">${t_in}</th>
+                                <th style="padding: 8px; border: 1px solid #d1d5db;">${t_out}</th>
+                                <th style="padding: 8px; border: 1px solid #d1d5db;">${t_lunch}</th>
+                                <th style="padding: 8px; border: 1px solid #d1d5db;">${t_over}</th>
+                                <th style="padding: 8px; border: 1px solid #d1d5db;">${t_night}</th>
+                                <th style="padding: 8px; border: 1px solid #d1d5db;">${t_sat}</th>
+                                <th style="padding: 8px; border: 1px solid #d1d5db;">${t_total}</th>
+                                <th style="padding: 8px; border: 1px solid #d1d5db;">${t_notes}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -2072,28 +2160,28 @@ async function generatePDFReport() {
                     
                     <div style="font-size: 13px; margin-bottom: 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                         <p style="margin: 0; padding: 5px; background: #f3f4f6; border-radius: 4px;">
-                            <strong>Total Hours (Gross):</strong> ${grossTotal.toFixed(2)}
+                            <strong>${l_total_gross}</strong> ${grossTotal.toFixed(2)}
                         </p>
                         <p style="margin: 0; padding: 5px; background: #f3f4f6; border-radius: 4px;">
-                            <strong>Total After Lunch Deduction:</strong> ${sumTotal.toFixed(2)}
+                            <strong>${l_total_net}</strong> ${sumTotal.toFixed(2)}
                         </p>
                         <p style="margin: 0; padding: 5px; background: #e0f2fe; border-radius: 4px;">
-                            <strong>Total Overtime:</strong> ${sumOvertime.toFixed(2)}
+                            <strong>${l_total_over}</strong> ${sumOvertime.toFixed(2)}
                         </p>
                         <p style="margin: 0; padding: 5px; background: #ede9fe; border-radius: 4px;">
-                            <strong>Total Night Hours:</strong> ${sumNight.toFixed(2)}
+                            <strong>${l_total_night}</strong> ${sumNight.toFixed(2)}
                         </p>
                         <p style="margin: 0; padding: 5px; background: #fef3c7; border-radius: 4px;">
-                            <strong>Total Saturday Hours:</strong> ${sumSat.toFixed(2)}
+                            <strong>${l_total_sat}</strong> ${sumSat.toFixed(2)}
                         </p>
                     </div>
                     
-                    <div style="display: flex; justify-content: space-between; margin-top: 50px;">
+                    <div style="display: flex; justify-content: space-between; margin-top: 50px; page-break-inside: avoid;">
                         <div style="width: 45%;">
-                            <p style="margin: 0; padding-bottom: 5px; border-bottom: 1px solid #6b7280; color: #4b5563;">Date / ${t_date}:</p>
+                            <p style="margin: 0; padding-bottom: 5px; border-bottom: 1px solid #6b7280; color: #4b5563;">${t_date}:</p>
                         </div>
                         <div style="width: 45%;">
-                            <p style="margin: 0; padding-bottom: 5px; border-bottom: 1px solid #6b7280; color: #4b5563;">Signature / ${currentLang==='he'?'חתימה':(currentLang==='ru'?'Подпись':'Signature')}:</p>
+                            <p style="margin: 0; padding-bottom: 5px; border-bottom: 1px solid #6b7280; color: #4b5563;">${l_sig}:</p>
                         </div>
                     </div>
                 </div>
@@ -2104,7 +2192,8 @@ async function generatePDFReport() {
                 filename:     `Timesheet_${empId}_${month}.pdf`,
                 image:        { type: 'jpeg', quality: 0.98 },
                 html2canvas:  { scale: 2, useCORS: true, logging: false },
-                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' },
+                pagebreak:    { mode: 'css' }
             };
 
             await html2pdf().set(opt).from(html).save();

@@ -9,6 +9,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
     <script>
 
 // Global fetch interceptor for TRIAL_EXPIRED
@@ -138,9 +140,9 @@ window.fetch = async function() {
                 msg_in_success: "Смена начата! Удачи.", msg_out_success: "Смена завершена. Отработано: ",
                 err_gps: "Нет доступа к GPS", err_network: "Ошибка сети",
                 req_gps: "Пожалуйста, включите GPS для начала работы.", req_arrive: "Вам необходимо сначала прибыть на объект. Ваша геопозиция не совпадает.",
-                report_btn: "Мои Отчёты", report_title: "Отчёт за месяц", report_total: "Всего часов:",
+                report_btn: "Мои Отчёты", report: 'Отчет за месяц (PDF)', report_title: "Отчёт за месяц", report_total: "Всего часов:",
                 report_night: "Ночные часы:", report_sat: "Часы в субботу:", report_over: "Сверхурочные:",
-                report_dl: "Скачать Отчёт", close: "Закрыть", error: "Ошибка",
+                report_dl: "Скачать Отчёт (PDF)", close: "Закрыть", error: "Ошибка",
                 remind_in: "Не забудьте нажать 'Вход' (смена скоро начнется)!", remind_out: "Не забудьте нажать 'Выход' (смена скоро закончится)!",
                 expense_btn: "Расходы / Заметки", expense_title: "Расход / Заметка",
                 expense_amt: "Сумма", expense_desc: "Описание",
@@ -154,9 +156,9 @@ window.fetch = async function() {
                 msg_in_success: "Shift started! Good luck.", msg_out_success: "Shift ended. Total time: ",
                 err_gps: "GPS access denied", err_network: "Network error",
                 req_gps: "Please enable GPS to clock in.", req_arrive: "You must arrive at the workplace first. Your location does not match the site.",
-                report_btn: "My Reports", report_title: "Monthly Report", report_total: "Total Hours:",
+                report_btn: "My Reports", report: 'Monthly Report (PDF)', report_title: "Monthly Report", report_total: "Total Hours:",
                 report_night: "Night Hours:", report_sat: "Saturday Hours:", report_over: "Overtime:",
-                report_dl: "Download Report", close: "Close", error: "Error",
+                report_dl: "Download Report (PDF)", close: "Close", error: "Error",
                 remind_in: "Don't forget to Clock In (shift starts soon)!", remind_out: "Don't forget to Clock Out (shift ends soon)!",
                 expense_btn: "Expenses / Notes", expense_title: "Expense / Note",
                 expense_amt: "Amount", expense_desc: "Description",
@@ -170,9 +172,9 @@ window.fetch = async function() {
                 msg_in_success: "משמרת התחילה! בהצלחה.", msg_out_success: "משמרת הסתיימה. זמן כולל: ",
                 err_gps: "גישה למיקום נדחתה", err_network: "שגיאת רשת",
                 req_gps: "אנא אפשר מיקום כדי לדווח כניסה.", req_arrive: "עליך להגיע תחילה לאתר. המיקום שלך לא תואם.",
-                report_btn: "הדוחות שלי", report_title: "דוח חודשי", report_total: "סה״כ שעות:",
+                report_btn: "הדוחות שלי", report: 'דוח חודשי (PDF)', report_title: "דוח חודשי", report_total: "סה״כ שעות:",
                 report_night: "שעות לילה:", report_sat: "שעות שבת:", report_over: "שעות נוספות:",
-                report_dl: "הורד דוח", close: "סגור", error: "שגיאה",
+                report_dl: "הורד דוח (PDF)", close: "סגור", error: "שגיאה",
                 remind_in: "אל תשכחו לדווח 'כניסה' (המשמרת מתחילה בקרוב)!", remind_out: "אל תשכחו לדווח 'יציאה' (המשמרת מסתיימת בקרוב)!",
                 expense_btn: "הוצאות / הערות", expense_title: "הוצאה / הערה",
                 expense_amt: "סכום", expense_desc: "תיאור",
@@ -186,9 +188,9 @@ window.fetch = async function() {
                 msg_in_success: "بدأت الوردية! بالتوفيق.", msg_out_success: "انتهت الوردية. إجمالي الوقت: ",
                 err_gps: "تم رفض الوصول للموقع", err_network: "خطأ في الشبكة",
                 req_gps: "الرجاء تمكين الموقع لتسجيل الدخول.", req_arrive: "يجب أن تصل إلى موقع العمل أولاً.",
-                report_btn: "تقاريري", report_title: "التقرير الشهري", report_total: "إجمالي الساعات:",
+                report_btn: "تقاريري", report: 'تقرير شهري (PDF)', report_title: "التقرير الشهري", report_total: "إجمالي الساعات:",
                 report_night: "ساعات الليل:", report_sat: "ساعات السبت:", report_over: "ساعات إضافية:",
-                report_dl: "تحميل التقرير", close: "إغلاق", error: "خطأ",
+                report_dl: "تحميل التقرير (PDF)", close: "إغلاق", error: "خطأ",
                 remind_in: "لا تنس تسجيل الدخول (يبدأ الدوام قريبا)!", remind_out: "لا تنس تسجيل الخروج (ينتهي الدوام قريبا)!",
                 expense_btn: "مصاريف / ملاحظات", expense_title: "مصروف / ملاحظة",
                 expense_amt: "المبلغ", expense_desc: "الوصف",
@@ -709,53 +711,47 @@ window.fetch = async function() {
             }
         }
 
+        const hebrewToLatin = {
+            'א': 'A', 'ב': 'B', 'ג': 'G', 'ד': 'D', 'ה': 'H', 'ו': 'V', 'ז': 'Z', 'ח': 'CH', 'ט': 'T', 'י': 'Y', 'כ': 'K', 'ך': 'K', 'ל': 'L', 'מ': 'M', 'ם': 'M', 'נ': 'N', 'ן': 'N', 'ס': 'S', 'ע': 'A', 'פ': 'P', 'ף': 'P', 'צ': 'TS', 'ץ': 'TS', 'ק': 'K', 'ר': 'R', 'ש': 'SH', 'ת': 'T',
+            'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'yo', 'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'j', 'к': 'k', 'л': 'l', 'м': 'm', 'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u', 'ф': 'f', 'х': 'h', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'sch', 'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya',
+            'А': 'A', 'Б': 'B', 'В': 'V', 'Г': 'G', 'Д': 'D', 'Е': 'E', 'Ё': 'Yo', 'Ж': 'Zh', 'З': 'Z', 'И': 'I', 'Й': 'J', 'К': 'K', 'Л': 'L', 'М': 'M', 'Н': 'N', 'О': 'O', 'П': 'P', 'Р': 'R', 'С': 'S', 'Т': 'T', 'У': 'U', 'Ф': 'F', 'Х': 'H', 'Ц': 'Ts', 'Ч': 'Ch', 'Ш': 'Sh', 'Щ': 'Sch', 'Ъ': '', 'Ы': 'Y', 'Ь': '', 'Э': 'E', 'Ю': 'Yu', 'Я': 'Ya', '₪': ' ILS'
+        };
+
+        function transliterate(str) {
+            if (!str) return '';
+            return String(str).split('').map(char => hebrewToLatin[char] || char).join('');
+        }
+
         function downloadReportCSV(dailyData, month, totals) {
-            let tableHtml = `
-                <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
-                <head>
-                    <meta charset="utf-8" />
-                    <style>
-                        table { border-collapse: collapse; font-family: sans-serif; }
-                        th, td { border: 1px solid #ccc; padding: 8px; }
-                        th { background-color: #f3f4f6; font-weight: bold; }
-                    </style>
-                </head>
-                <body dir="${document.documentElement.dir}">
-                    <table>
-                        <tr><th>${i18n[currentLang].date} (Date)</th><th>${i18n[currentLang].hours} (Hours)</th></tr>`;
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            doc.setFontSize(18);
+            doc.text(`Worker Report - ${month}`, 14, 20);
             
+            const tableBody = [];
             for (let d in dailyData) {
                 const dateParts = d.split('-');
                 const formattedDate = dateParts.length === 3 ? `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}` : d;
-                tableHtml += `<tr><td>${formattedDate}</td><td>${formatHM(dailyData[d])}</td></tr>`;
+                tableBody.push([formattedDate, formatHM(dailyData[d])]);
             }
-            
-            tableHtml += `
-                        <tr><td></td><td></td></tr>
-                        <tr><td><strong>${i18n[currentLang].report_total}</strong></td><td><strong>${formatHM(totals.totalHours)}</strong></td></tr>
-                        <tr><td>${i18n[currentLang].report_over}</td><td>${formatHM(totals.overtimeHours)}</td></tr>
-                        <tr><td>${i18n[currentLang].report_sat}</td><td>${formatHM(totals.saturdayHours)}</td></tr>
-                        <tr><td>${i18n[currentLang].report_night}</td><td>${formatHM(totals.nightHours)}</td></tr>
-                    </table>
-                </body>
-                </html>`;
 
-            const blob = new Blob([tableHtml], { type: 'application/vnd.ms-excel' });
-            const link = document.createElement("a");
-            const url = URL.createObjectURL(blob);
-            link.setAttribute("href", url);
-            link.setAttribute("download", `Report_${empId}_${month}.xls`);
-            link.style.visibility = 'hidden';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            tableBody.push(['', '']);
+            tableBody.push([transliterate(i18n[currentLang].report_total), formatHM(totals.totalHours)]);
+            tableBody.push([transliterate(i18n[currentLang].report_over), formatHM(totals.overtimeHours)]);
+            tableBody.push([transliterate(i18n[currentLang].report_sat), formatHM(totals.saturdayHours)]);
+            tableBody.push([transliterate(i18n[currentLang].report_night), formatHM(totals.nightHours)]);
+
+            doc.autoTable({
+                startY: 30,
+                head: [[transliterate(i18n[currentLang].date), transliterate(i18n[currentLang].hours)]],
+                body: tableBody,
+                theme: 'grid',
+                styles: { font: 'helvetica' }
+            });
+
+            doc.save(`Report_${localStorage.getItem('empId') || 'Worker'}_${month}.pdf`);
         }
 
-        init();
-
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js');
-        }
     </script>
 </body>
 </html>

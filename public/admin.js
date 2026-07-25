@@ -126,6 +126,7 @@ const i18n = {
         per_hour: "לשעה", per_worker: "לעובד ליום", block_btn: "חסום", unblock_btn: "שחרר", copied: "הועתק!",
         qr_scan_text: "סרוק קוד זה במצלמת הטלפון שלך כדי להתקין את אפליקציית מעקב הזמן.",
         edit: "ערוך", indiv_shifts: "משמרות אישיות (ריק = גלובלי)", save_changes: "שמור שינויים", cancel: "ביטול", unlock_trial: "בטל הגבלה", delete_client: "מחק לקוח",
+        invoices_title: "חשבוניות", amount: "סכום",
         tab_owner_hierarchy: "היררכיה", tab_client_foremen: "מנהלי עבודה", tab_client_analytics: "ניתוח נתונים"
     }
 };
@@ -1932,7 +1933,6 @@ async function generatePDFReport() {
     const startDate = new Date(year, m, 1);
     const endDate = new Date(year, m + 1, 0, 23, 59, 59, 999);
     
-    // adjust to timezone offset to avoid JS date shifting when sending to server
     const startStr = new Date(startDate.getTime() - startDate.getTimezoneOffset() * 60000).toISOString();
     const endStr = new Date(endDate.getTime() - endDate.getTimezoneOffset() * 60000).toISOString();
 
@@ -1959,7 +1959,6 @@ async function generatePDFReport() {
             return;
         }
 
-        // Group by empId
         const workers = {};
         reportData.forEach(row => {
             if (!workers[row.empId]) {
@@ -1968,27 +1967,36 @@ async function generatePDFReport() {
             workers[row.empId].rows.push(row);
         });
 
-        const { jsPDF } = window.jspdf;
+        const isRtl = currentLang === 'he' || currentLang === 'ar';
+        const alignDir = isRtl ? 'right' : 'left';
+        
+        const t_date = i18n[currentLang].date || 'Date';
+        const t_day = currentLang === 'he' ? 'יום' : (currentLang === 'ru' ? 'День' : 'Day');
+        const t_in = currentLang === 'he' ? 'כניסה' : (currentLang === 'ru' ? 'Вход' : 'In');
+        const t_out = currentLang === 'he' ? 'יציאה' : (currentLang === 'ru' ? 'Выход' : 'Out');
+        const t_lunch = currentLang === 'he' ? 'הפסקת צהריים' : (currentLang === 'ru' ? 'Перерыв' : 'Lunch Ded.');
+        const t_over = i18n[currentLang].overtime_hours || 'Overtime';
+        const t_night = i18n[currentLang].night_hours || 'Night';
+        const t_sat = i18n[currentLang].saturday_hours || 'Saturday';
+        const t_total = currentLang === 'he' ? 'סה"כ שעות' : (currentLang === 'ru' ? 'Итого часов' : 'Total Hrs');
+        const t_notes = currentLang === 'he' ? 'הערות' : (currentLang === 'ru' ? 'Заметки' : 'Notes');
+
+        const managerName = r.clientName || 'Manager';
+        const reportTitle = currentLang === 'he' ? 'דוח שעות חודשי' : (currentLang === 'ru' ? 'Ежемесячный отчёт' : 'Monthly Timesheet Report');
+        const l_worker = currentLang === 'he' ? 'עובד' : (currentLang === 'ru' ? 'Работник' : 'Worker');
+        const l_manager = currentLang === 'he' ? 'מנהל עבודה' : (currentLang === 'ru' ? 'Руководитель' : 'Manager');
+        const l_month = currentLang === 'he' ? 'חודש' : (currentLang === 'ru' ? 'Месяц' : 'Month');
 
         for (const [empId, data] of Object.entries(workers)) {
-            const doc = new jsPDF();
-            
-            // Header
-            doc.setFontSize(18);
-            doc.text('Monthly Timesheet Report', 14, 20);
-            doc.setFontSize(12);
-            
-            const englishName = transliterate(data.name);
-            doc.text(`Employee: ${englishName} (ID: ${empId})`, 14, 30);
-            doc.text(`Month: ${month}`, 14, 38);
-
-            const tableBody = [];
             let sumTotal = 0, sumOvertime = 0, sumNight = 0, sumSat = 0, sumLunch = 0;
-
+            
+            let rowsHtml = '';
             data.rows.forEach(r => {
                 const dDate = new Date(r.date);
-                const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-                const dayName = days[dDate.getDay()];
+                const daysEn = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                const daysRu = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+                const daysHe = ["א'", "ב'", "ג'", "ד'", "ה'", "ו'", "ש'"];
+                const dayName = currentLang === 'he' ? daysHe[dDate.getDay()] : (currentLang === 'ru' ? daysRu[dDate.getDay()] : daysEn[dDate.getDay()]);
                 
                 let startTimes = [], endTimes = [];
                 if (r.times) {
@@ -2002,18 +2010,20 @@ async function generatePDFReport() {
                     });
                 }
 
-                tableBody.push([
-                    r.date,
-                    dayName,
-                    startTimes.join('\n') || '-',
-                    endTimes.join('\n') || '-',
-                    r.lunchDeduction || '0',
-                    r.overtimeHours || '0',
-                    r.nightHours || '0',
-                    r.saturdayHours || '0',
-                    r.totalHours || '0',
-                    r.notes ? transliterate(r.notes) : ''
-                ]);
+                rowsHtml += `
+                    <tr style="border-bottom: 1px solid #e5e7eb;">
+                        <td style="padding: 8px;">${r.date.split('-').reverse().join('.')}</td>
+                        <td style="padding: 8px;">${dayName}</td>
+                        <td style="padding: 8px;">${startTimes.join('<br>') || '-'}</td>
+                        <td style="padding: 8px;">${endTimes.join('<br>') || '-'}</td>
+                        <td style="padding: 8px;">${r.lunchDeduction || '0'}</td>
+                        <td style="padding: 8px;">${r.overtimeHours || '0'}</td>
+                        <td style="padding: 8px;">${r.nightHours || '0'}</td>
+                        <td style="padding: 8px;">${r.saturdayHours || '0'}</td>
+                        <td style="padding: 8px; font-weight: bold;">${r.totalHours || '0'}</td>
+                        <td style="padding: 8px; font-size: 10px; max-width: 150px; word-wrap: break-word;">${r.notes || ''}</td>
+                    </tr>
+                `;
 
                 sumLunch += parseFloat(r.lunchDeduction || 0);
                 sumOvertime += parseFloat(r.overtimeHours || 0);
@@ -2022,36 +2032,91 @@ async function generatePDFReport() {
                 sumTotal += parseFloat(r.totalHours || 0);
             });
 
-            doc.autoTable({
-                startY: 45,
-                head: [['Date', 'Day', 'In', 'Out', 'Lunch Ded.', 'Overtime', 'Night', 'Saturday', 'Total Hrs', 'Notes']],
-                body: tableBody,
-                theme: 'grid',
-                headStyles: { fillColor: [59, 130, 246] },
-                styles: { fontSize: 8, cellPadding: 2 },
-                columnStyles: { 9: { cellWidth: 40 } },
-            });
-
-            let finalY = doc.lastAutoTable.finalY || 45;
-            
-            // Totals
             const grossTotal = sumTotal + sumLunch;
-            doc.setFontSize(11);
-            doc.setFont(undefined, 'bold');
-            doc.text(`Total Hours (Gross): ${grossTotal.toFixed(2)}`, 14, finalY + 10);
-            doc.text(`Total After Lunch Deduction: ${sumTotal.toFixed(2)}`, 14, finalY + 16);
-            doc.setFont(undefined, 'normal');
-            doc.text(`Total Overtime: ${sumOvertime.toFixed(2)}`, 14, finalY + 22);
-            doc.text(`Total Night Hours: ${sumNight.toFixed(2)}`, 14, finalY + 28);
-            doc.text(`Total Saturday Hours: ${sumSat.toFixed(2)}`, 14, finalY + 34);
 
-            // Signature Area
-            const managerName = r.clientName ? transliterate(r.clientName) : 'Manager';
-            doc.text(`Manager: ${managerName}`, 14, finalY + 50);
-            doc.text(`Date: ____________________`, 14, finalY + 60);
-            doc.text(`Signature: ____________________`, 100, finalY + 60);
+            const html = `
+                <div style="font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; direction: ${isRtl ? 'rtl' : 'ltr'}; padding: 40px; color: #1f2937; background: #fff;">
+                    <h2 style="font-size: 24px; color: #1e3a8a; border-bottom: 2px solid #3b82f6; padding-bottom: 10px; margin-bottom: 20px;">
+                        ${reportTitle}
+                    </h2>
+                    
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 20px; font-size: 14px;">
+                        <div>
+                            <p style="margin: 5px 0;"><strong>${l_worker}:</strong> ${data.name} (ID: ${empId})</p>
+                            <p style="margin: 5px 0;"><strong>${l_manager}:</strong> ${managerName}</p>
+                        </div>
+                        <div>
+                            <p style="margin: 5px 0;"><strong>${l_month}:</strong> ${month}</p>
+                        </div>
+                    </div>
+                    
+                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 11px; text-align: ${alignDir};">
+                        <thead>
+                            <tr style="background-color: #3b82f6; color: white;">
+                                <th style="padding: 8px; border: 1px solid #2563eb;">${t_date}</th>
+                                <th style="padding: 8px; border: 1px solid #2563eb;">${t_day}</th>
+                                <th style="padding: 8px; border: 1px solid #2563eb;">${t_in}</th>
+                                <th style="padding: 8px; border: 1px solid #2563eb;">${t_out}</th>
+                                <th style="padding: 8px; border: 1px solid #2563eb;">${t_lunch}</th>
+                                <th style="padding: 8px; border: 1px solid #2563eb;">${t_over}</th>
+                                <th style="padding: 8px; border: 1px solid #2563eb;">${t_night}</th>
+                                <th style="padding: 8px; border: 1px solid #2563eb;">${t_sat}</th>
+                                <th style="padding: 8px; border: 1px solid #2563eb;">${t_total}</th>
+                                <th style="padding: 8px; border: 1px solid #2563eb;">${t_notes}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${rowsHtml}
+                        </tbody>
+                    </table>
+                    
+                    <div style="font-size: 13px; margin-bottom: 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <p style="margin: 0; padding: 5px; background: #f3f4f6; border-radius: 4px;">
+                            <strong>Total Hours (Gross):</strong> ${grossTotal.toFixed(2)}
+                        </p>
+                        <p style="margin: 0; padding: 5px; background: #f3f4f6; border-radius: 4px;">
+                            <strong>Total After Lunch Deduction:</strong> ${sumTotal.toFixed(2)}
+                        </p>
+                        <p style="margin: 0; padding: 5px; background: #e0f2fe; border-radius: 4px;">
+                            <strong>Total Overtime:</strong> ${sumOvertime.toFixed(2)}
+                        </p>
+                        <p style="margin: 0; padding: 5px; background: #ede9fe; border-radius: 4px;">
+                            <strong>Total Night Hours:</strong> ${sumNight.toFixed(2)}
+                        </p>
+                        <p style="margin: 0; padding: 5px; background: #fef3c7; border-radius: 4px;">
+                            <strong>Total Saturday Hours:</strong> ${sumSat.toFixed(2)}
+                        </p>
+                    </div>
+                    
+                    <div style="display: flex; justify-content: space-between; margin-top: 50px;">
+                        <div style="width: 45%;">
+                            <p style="margin: 0; padding-bottom: 5px; border-bottom: 1px solid #6b7280; color: #4b5563;">Date / ${t_date}:</p>
+                        </div>
+                        <div style="width: 45%;">
+                            <p style="margin: 0; padding-bottom: 5px; border-bottom: 1px solid #6b7280; color: #4b5563;">Signature / ${currentLang==='he'?'חתימה':(currentLang==='ru'?'Подпись':'Signature')}:</p>
+                        </div>
+                    </div>
+                </div>
+            `;
 
-            doc.save(`Timesheet_${empId}_${month}.pdf`);
+            const container = document.createElement('div');
+            container.innerHTML = html;
+            document.body.appendChild(container); // attach to body temporarily
+            container.style.position = 'absolute';
+            container.style.left = '-9999px';
+            container.style.top = '-9999px';
+
+            const opt = {
+                margin:       10,
+                filename:     `Timesheet_${empId}_${month}.pdf`,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true, logging: false },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            await html2pdf().set(opt).from(container).save();
+            
+            document.body.removeChild(container);
         }
 
     } catch(e) {

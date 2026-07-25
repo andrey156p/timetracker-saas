@@ -1114,7 +1114,35 @@ async function openNotesModal(empId, initialDate = null) {
         });
         if((await res.json()).success) {
             Swal.fire({ icon: 'success', title: 'Сохранено', timer: 1500, showConfirmButton: false });
-            if (typeof loadClientHours === 'function') loadClientHours();
+            
+            // Update in memory and DOM directly to avoid layout shift
+            if (typeof lastReportData !== 'undefined') {
+                const rowData = lastReportData.find(d => d.empId === empId && d.date === formValues.date);
+                if (rowData) rowData.notes = formValues.noteText;
+            }
+            
+            // Re-render without loading text to keep scroll position
+            if (typeof loadClientHours === 'function') {
+                const resultsEl = document.getElementById('client-hours-results');
+                if (resultsEl) {
+                    const oldHtml = resultsEl.innerHTML;
+                    try {
+                        // Suppress loading text by temporarily overriding it in loadClientHours? 
+                        // Better to just call it. But wait, if I call it, it still replaces HTML.
+                        // Let's just find the cell and update it.
+                        const safeNotes = formValues.noteText ? formValues.noteText.replace(/</g, '&lt;').replace(/>/g, '&gt;') : '';
+                        const notesHtml = safeNotes 
+                            ? `<span class="truncate block w-24 sm:w-32">${safeNotes}</span>` 
+                            : `<span class="text-gray-300 italic opacity-50 hover:opacity-100">+ Добавить</span>`;
+                        
+                        // We can just rely on loadClientHours but we need to stop it from clearing HTML.
+                        // Instead, let's just trigger loadClientHours but we will modify loadClientHours separately to not collapse.
+                    } catch(e) {}
+                }
+                
+                // For now, we will let loadClientHours run, but we will patch loadClientHours to not clear HTML!
+                loadClientHours(true); // Pass true to prevent loading text
+            }
             if (typeof renderClientAnalytics === 'function') renderClientAnalytics();
         } else {
             Swal.fire({ icon: 'error', title: 'Ошибка сохранения' });
@@ -1321,7 +1349,7 @@ async function saveClientSettings() {
 
 let lastReportData = [];
 
-async function loadClientHours() {
+async function loadClientHours(silent = false) {
     try {
         const startEl = document.getElementById('c-start');
         const endEl = document.getElementById('c-end');
@@ -1333,7 +1361,9 @@ async function loadClientHours() {
         
         if (!resultsEl) return showToast('Ошибка UI: блок результатов не найден!');
         
-        resultsEl.innerHTML = '<div class="text-blue-500 p-4 font-bold animate-pulse">Загрузка данных с сервера... Пожалуйста, подождите.</div>';
+        if (!silent) {
+            resultsEl.innerHTML = '<div class="text-blue-500 p-4 font-bold animate-pulse">Загрузка данных с сервера... Пожалуйста, подождите.</div>';
+        }
         
         const res = await fetch(`${API_URL}/client/hours?startDate=${start}&endDate=${end}T23:59:59`, { headers: authHeaders() });
         
@@ -2126,13 +2156,13 @@ async function generatePDFReport() {
             const html = `
                 <div style="width: 100%; box-sizing: border-box; font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; direction: ${isRtl ? 'rtl' : 'ltr'}; padding: 40px; color: #1f2937; background: #fff;">
                     <h2 style="font-size: 24px; color: #1e3a8a; border-bottom: 2px solid #3b82f6; padding-bottom: 10px; margin-bottom: 20px;">
-                        ${reportTitle}
+                        ${reportTitle.replace(/ /g, '&nbsp;')}
                     </h2>
                     
                     <div style="display: flex; justify-content: space-between; margin-bottom: 20px; font-size: 14px;">
                         <div>
-                            <p style="margin: 5px 0;"><strong>${l_worker}</strong> &nbsp; ${data.name} &nbsp; <span dir="ltr">(ID: ${empId})</span></p>
-                            <p style="margin: 5px 0;"><strong>${l_manager}</strong> &nbsp; ${managerName}</p>
+                            <p style="margin: 5px 0;"><strong>${l_worker}</strong> &nbsp; <bdi>${data.name} (ID: ${empId})</bdi></p>
+                            <p style="margin: 5px 0;"><strong>${l_manager}</strong> &nbsp; <bdi>${managerName}</bdi></p>
                         </div>
                         <div>
                             <p style="margin: 5px 0;"><strong>${l_month}</strong> &nbsp; ${month}</p>

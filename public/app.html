@@ -265,14 +265,7 @@ window.fetch = async function() {
 
                     // Setup state
                     workerShifts = r.shifts || {};
-                    if (r.lastLog && (r.lastLog.action === 'Вход' || r.lastLog.action === 'Авто-Продолжение' || r.lastLog.action === 'Авто-Пауза')) {
-                        if (r.lastLog.action === 'Авто-Пауза') {
-                            isPausedGps = true;
-                            document.getElementById('app-screen').classList.add('bg-yellow-50');
-                            document.getElementById('emp-status').textContent = 'ВНЕ ЗОНЫ (ПАУЗА)';
-                            document.getElementById('emp-status').classList.replace('text-green-600', 'text-yellow-600');
-                            document.getElementById('timer-display').style.color = 'orange';
-                        }
+                    if (r.lastLog && (r.lastLog.action === 'Вход')) {
                         shiftStartTime = new Date(r.lastLog.time);
                         setBtnState(true); // true = clocked in
                     } else {
@@ -485,36 +478,21 @@ window.fetch = async function() {
                     if (dist > geofenceData.radius) {
                         if (!isPausedGps) {
                             isPausedGps = true;
-                            document.getElementById('app-screen').classList.add('bg-yellow-50');
-                            document.getElementById('emp-status').textContent = 'ВНЕ ЗОНЫ (ПАУЗА)';
-                            document.getElementById('emp-status').classList.remove('text-green-600');
-                            document.getElementById('emp-status').classList.add('text-yellow-600');
-                            document.getElementById('timer-display').style.color = 'orange';
+                            Swal.fire({ toast: true, position: 'top', icon: 'warning', title: 'Выход из зоны (Авто-Выход)', showConfirmButton: false, timer: 4000 });
                             
                             try {
-                                await fetch(API_URL + '/worker/gps-pause', {
+                                await fetch(API_URL + '/worker/log', {
                                     method: 'POST', headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ empId: localStorage.getItem('empId'), lat: pos.coords.latitude, lng: pos.coords.longitude })
+                                    body: JSON.stringify({ empId: localStorage.getItem('empId'), action: 'Авто-Выход', lat: pos.coords.latitude, lng: pos.coords.longitude })
                                 });
                             } catch(e) {}
-                        }
-                    } else {
-                        if (isPausedGps) {
-                            isPausedGps = false;
-                            document.getElementById('app-screen').classList.remove('bg-yellow-50');
-                            document.getElementById('emp-status').textContent = i18n[currentLang].status_ok;
-                            document.getElementById('emp-status').classList.remove('text-yellow-600');
-                            document.getElementById('emp-status').classList.add('text-green-600');
-                            document.getElementById('timer-display').style.color = '';
-
-                            try {
-                                await fetch(API_URL + '/worker/gps-resume', {
-                                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ empId: localStorage.getItem('empId'), lat: pos.coords.latitude, lng: pos.coords.longitude })
-                                });
-                            } catch(e) {}
+                            
+                            shiftStartTime = null;
+                            setBtnState(false);
+                            stopGpsWatch();
                         }
                     }
+
                 },
                 (err) => { console.error('GPS Watch Error', err); },
                 { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }

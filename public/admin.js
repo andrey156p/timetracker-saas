@@ -1063,14 +1063,14 @@ async function quickLog(action) {
 }
 
 
-async function openNotesModal(empId) {
+async function openNotesModal(empId, initialDate = null) {
     const { value: formValues } = await Swal.fire({
         title: 'Примечания к дням',
         html: `
             <div class="flex flex-col gap-4 text-left">
                 <label class="flex flex-col gap-1">
                     <span class="text-sm font-semibold">Выберите дату:</span>
-                    <input id="swal-note-date" type="date" class="border p-2 rounded" value="${new Date().toISOString().split('T')[0]}">
+                    <input id="swal-note-date" type="date" class="border p-2 rounded" value="${initialDate || new Date().toISOString().split('T')[0]}">
                 </label>
                 <label class="flex flex-col gap-1">
                     <span class="text-sm font-semibold">Текст примечания (пойдет в отчет):</span>
@@ -1114,6 +1114,8 @@ async function openNotesModal(empId) {
         });
         if((await res.json()).success) {
             Swal.fire({ icon: 'success', title: 'Сохранено', timer: 1500, showConfirmButton: false });
+            if (typeof loadClientHours === 'function') loadClientHours();
+            if (typeof renderClientAnalytics === 'function') renderClientAnalytics();
         } else {
             Swal.fire({ icon: 'error', title: 'Ошибка сохранения' });
         }
@@ -1402,6 +1404,7 @@ async function loadClientHours() {
                             <th class="p-2 text-indigo-600" data-i18n="night_hours">Ночные</th>
                             <th class="p-2 text-purple-600" data-i18n="saturday_hours">Суббота</th>
                             <th class="p-2 text-red-600" data-i18n="overtime_hours">Сверхурочные</th>
+                            <th class="p-2" data-i18n="comments">Комментарий</th>
                         </tr></thead><tbody>`;
                 
                 grp.rows.forEach(d => {
@@ -1427,6 +1430,11 @@ async function loadClientHours() {
                         }
                     }
 
+                    const safeNotes = d.notes ? d.notes.replace(/</g, '&lt;').replace(/>/g, '&gt;') : '';
+                    const notesHtml = safeNotes 
+                        ? `<span class="truncate block w-24 sm:w-32">${safeNotes}</span>` 
+                        : `<span class="text-gray-300 italic opacity-50 hover:opacity-100">+ Добавить</span>`;
+
                     html += `<tr class="border-b hover:bg-gray-50">
                         <td class="p-2 text-gray-500 font-mono text-sm">${d.date || '-'}${dayStr}</td>
                         <td class="p-2 text-blue-600 font-mono text-xs cursor-pointer hover:underline" onclick="editManualShift('${d.empId}', '${d.date}', '${firstIn}', '${lastOut}')" title="Кликните чтобы изменить время">${d.times || '-'}</td>
@@ -1434,6 +1442,7 @@ async function loadClientHours() {
                         <td class="p-2 text-indigo-600">${formatHM(parseFloat(d.nightHours || 0))}</td>
                         <td class="p-2 text-purple-600">${formatHM(parseFloat(d.saturdayHours || 0))}</td>
                         <td class="p-2 font-bold text-red-600">${formatHM(parseFloat(d.overtimeHours || 0))}</td>
+                        <td class="p-2 text-gray-600 text-xs cursor-pointer hover:bg-gray-100" onclick="openNotesModal('${d.empId}', '${d.date}')" title="Кликните чтобы редактировать комментарий">${notesHtml}</td>
                     </tr>`;
                 });
                 

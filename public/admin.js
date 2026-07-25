@@ -1416,9 +1416,19 @@ async function loadClientHours() {
                             if(lastMatch) lastOut = lastMatch[1];
                         }
                     }
+                    let dayStr = '';
+                    if (d.date) {
+                        const dt = new Date(d.date);
+                        if (!isNaN(dt)) {
+                            const daysRu = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+                            const daysHe = ['א\'', 'ב\'', 'ג\'', 'ד\'', 'ה\'', 'ו\'', 'ש\''];
+                            const dayNames = currentLang === 'he' ? daysHe : daysRu;
+                            dayStr = ` <span class="text-xs text-gray-400">(${dayNames[dt.getDay()]})</span>`;
+                        }
+                    }
 
                     html += `<tr class="border-b hover:bg-gray-50">
-                        <td class="p-2 text-gray-500">${d.date || '-'}</td>
+                        <td class="p-2 text-gray-500 font-mono text-sm">${d.date || '-'}${dayStr}</td>
                         <td class="p-2 text-blue-600 font-mono text-xs cursor-pointer hover:underline" onclick="editManualShift('${d.empId}', '${d.date}', '${firstIn}', '${lastOut}')" title="Кликните чтобы изменить время">${d.times || '-'}</td>
                         <td class="p-2 font-bold text-blue-600 cursor-pointer hover:underline" onclick="editManualShift('${d.empId}', '${d.date}', '${firstIn}', '${lastOut}')" title="Кликните чтобы изменить время">${formatHM(parseFloat(d.totalHours || 0))}</td>
                         <td class="p-2 text-indigo-600">${formatHM(parseFloat(d.nightHours || 0))}</td>
@@ -1451,11 +1461,11 @@ async function editManualShift(empId, date, currentIn, currentOut) {
             <div class="flex flex-col space-y-3 text-left">
                 <div>
                     <label class="block text-sm font-bold mb-1">Время Входа (24h, например 08:30)</label>
-                    <input id="swal-in" type="text" placeholder="HH:MM" pattern="^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$" class="w-full border p-2 rounded" value="${currentIn}">
+                    <input id="swal-in" type="tel" maxlength="5" placeholder="HH:MM" pattern="^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$" class="w-full border p-2 rounded" value="${currentIn}">
                 </div>
                 <div>
                     <label class="block text-sm font-bold mb-1">Время Выхода (24h, например 17:00)</label>
-                    <input id="swal-out" type="text" placeholder="HH:MM" pattern="^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$" class="w-full border p-2 rounded" value="${currentOut}">
+                    <input id="swal-out" type="tel" maxlength="5" placeholder="HH:MM" pattern="^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$" class="w-full border p-2 rounded" value="${currentOut}">
                 </div>
             </div>
         `,
@@ -1463,6 +1473,17 @@ async function editManualShift(empId, date, currentIn, currentOut) {
         showCancelButton: true,
         confirmButtonText: 'Сохранить',
         cancelButtonText: 'Отмена',
+        didOpen: () => {
+            const formatTimeInput = (e) => {
+                let val = e.target.value.replace(/\D/g, ''); // strip non-digits
+                if (val.length > 2) {
+                    val = val.slice(0, 2) + ':' + val.slice(2, 4);
+                }
+                e.target.value = val;
+            };
+            document.getElementById('swal-in').addEventListener('input', formatTimeInput);
+            document.getElementById('swal-out').addEventListener('input', formatTimeInput);
+        },
         preConfirm: () => {
             const timeIn = document.getElementById('swal-in').value;
             const timeOut = document.getElementById('swal-out').value;

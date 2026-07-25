@@ -752,6 +752,10 @@ window.fetch = async function() {
             doc.save(`Report_${localStorage.getItem('empId') || 'Worker'}_${month}.pdf`);
         }
 
+        init();
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js');
+        }
     </script>
 </body>
 </html>

@@ -22,7 +22,7 @@ function App() {
   }, [token])
 
   return (
-    <Router basename="/admin">
+    <Router basename="/react-admin">
       {token && <Navbar setToken={setToken} />}
       <div className="container mx-auto p-4">
         <Routes>

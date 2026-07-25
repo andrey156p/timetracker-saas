@@ -736,14 +736,14 @@ window.fetch = async function() {
             }
 
             tableBody.push(['', '']);
-            tableBody.push([transliterate(i18n[currentLang].report_total), formatHM(totals.totalHours)]);
-            tableBody.push([transliterate(i18n[currentLang].report_over), formatHM(totals.overtimeHours)]);
-            tableBody.push([transliterate(i18n[currentLang].report_sat), formatHM(totals.saturdayHours)]);
-            tableBody.push([transliterate(i18n[currentLang].report_night), formatHM(totals.nightHours)]);
+            tableBody.push(['Total Hours:', formatHM(totals.totalHours)]);
+            tableBody.push(['Overtime:', formatHM(totals.overtimeHours)]);
+            tableBody.push(['Saturday Hours:', formatHM(totals.saturdayHours)]);
+            tableBody.push(['Night Hours:', formatHM(totals.nightHours)]);
 
             doc.autoTable({
                 startY: 30,
-                head: [[transliterate(i18n[currentLang].date), transliterate(i18n[currentLang].hours)]],
+                head: [['Date', 'Hours']],
                 body: tableBody,
                 theme: 'grid',
                 styles: { font: 'helvetica' }

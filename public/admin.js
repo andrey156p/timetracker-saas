@@ -1516,40 +1516,14 @@ function exportClientHoursCSV() {
     try {
         if(!lastReportData || lastReportData.length === 0) return showToast('Нет данных для выгрузки. Сначала загрузите таблицу.');
         
-        // Use a bulletproof Excel HTML string to completely bypass all comma/semicolon/locale issues
-        const tableHtml = document.getElementById('export-container').outerHTML;
-        const excelHtml = `
-            <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
-            <head>
-                <meta charset="utf-8" />
-                <!--[if gte mso 9]>
-                <xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet>
-                <x:Name>Отчёт</x:Name>
-                <x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions>
-                </x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml>
-                <![endif]-->
-                <style>
-                    body { font-family: sans-serif; }
-                    table { border-collapse: collapse; margin-bottom: 20px; width: 100%; }
-                    th, td { border: 1px solid #ccc; padding: 5px; text-align: left; }
-                    th { background-color: #f3f4f6; }
-                    h4 { margin: 10px 0 5px 0; font-size: 14pt; }
-                </style>
-            </head>
-            <body dir="${document.documentElement.dir}">
-                ${tableHtml}
-            </body>
-            </html>
-        `;
+        const table = document.getElementById('export-container').querySelector('table');
+        if (!table) return showToast('Таблица не найдена');
+
+        // Parse table to worksheet
+        const wb = XLSX.utils.table_to_book(table, {sheet: "Отчёт"});
         
-        const blob = new Blob(["\uFEFF", excelHtml], { type: 'application/vnd.ms-excel;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.setAttribute("href", url);
-        link.setAttribute("download", `report_daily_${new Date().toISOString().split('T')[0]}.xls`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        // Write file and trigger download
+        XLSX.writeFile(wb, `report_daily_${new Date().toISOString().split('T')[0]}.xlsx`);
         
     } catch(e) {
         showToast(`Ошибка при выгрузке отчёта: ${e.message}`);
@@ -2138,11 +2112,11 @@ async function generatePDFReport() {
                     
                     <div style="display: flex; justify-content: space-between; margin-bottom: 20px; font-size: 14px;">
                         <div>
-                            <p style="margin: 5px 0;"><strong>${l_worker}:</strong> ${data.name} (ID: ${empId})</p>
-                            <p style="margin: 5px 0;"><strong>${l_manager}:</strong> ${managerName}</p>
+                            <p style="margin: 5px 0;"><strong>${l_worker}</strong> &nbsp; ${data.name} &nbsp; <span dir="ltr">(ID: ${empId})</span></p>
+                            <p style="margin: 5px 0;"><strong>${l_manager}</strong> &nbsp; ${managerName}</p>
                         </div>
                         <div>
-                            <p style="margin: 5px 0;"><strong>${l_month}:</strong> ${month}</p>
+                            <p style="margin: 5px 0;"><strong>${l_month}</strong> &nbsp; ${month}</p>
                         </div>
                     </div>
                     

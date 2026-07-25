@@ -1460,12 +1460,12 @@ async function editManualShift(empId, date, currentIn, currentOut) {
             <p class="text-xs text-red-500 mb-2">Внимание: ручное изменение перезапишет все существующие смены (если их несколько) на одну новую ручную смену за этот день!</p>
             <div class="flex flex-col space-y-3 text-left">
                 <div>
-                    <label class="block text-sm font-bold mb-1">Время Входа (24h, например 08:30)</label>
-                    <input id="swal-in" type="tel" maxlength="5" placeholder="HH:MM" pattern="^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$" class="w-full border p-2 rounded" value="${currentIn}">
+                    <label class="block text-sm font-bold mb-1">Время Входа</label>
+                    <input id="swal-in" type="time" class="w-full border p-2 rounded" value="${currentIn}" required>
                 </div>
                 <div>
-                    <label class="block text-sm font-bold mb-1">Время Выхода (24h, например 17:00)</label>
-                    <input id="swal-out" type="tel" maxlength="5" placeholder="HH:MM" pattern="^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$" class="w-full border p-2 rounded" value="${currentOut}">
+                    <label class="block text-sm font-bold mb-1">Время Выхода</label>
+                    <input id="swal-out" type="time" class="w-full border p-2 rounded" value="${currentOut}" required>
                 </div>
             </div>
         `,
@@ -1473,17 +1473,6 @@ async function editManualShift(empId, date, currentIn, currentOut) {
         showCancelButton: true,
         confirmButtonText: 'Сохранить',
         cancelButtonText: 'Отмена',
-        didOpen: () => {
-            const formatTimeInput = (e) => {
-                let val = e.target.value.replace(/\D/g, ''); // strip non-digits
-                if (val.length > 2) {
-                    val = val.slice(0, 2) + ':' + val.slice(2, 4);
-                }
-                e.target.value = val;
-            };
-            document.getElementById('swal-in').addEventListener('input', formatTimeInput);
-            document.getElementById('swal-out').addEventListener('input', formatTimeInput);
-        },
         preConfirm: () => {
             const timeIn = document.getElementById('swal-in').value;
             const timeOut = document.getElementById('swal-out').value;

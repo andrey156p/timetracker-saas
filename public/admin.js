@@ -2099,16 +2099,6 @@ async function generatePDFReport() {
                 </div>
             `;
 
-            const container = document.createElement('div');
-            container.innerHTML = html;
-            document.body.appendChild(container); // attach to body temporarily
-            container.style.position = 'absolute';
-            container.style.left = '0';
-            container.style.top = '0';
-            container.style.zIndex = '-9999';
-            container.style.opacity = '0';
-            container.style.pointerEvents = 'none';
-
             const opt = {
                 margin:       10,
                 filename:     `Timesheet_${empId}_${month}.pdf`,
@@ -2117,9 +2107,7 @@ async function generatePDFReport() {
                 jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
 
-            await html2pdf().set(opt).from(container).save();
-            
-            document.body.removeChild(container);
+            await html2pdf().set(opt).from(html).save();
         }
 
     } catch(e) {

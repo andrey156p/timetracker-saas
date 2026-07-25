@@ -10,7 +10,7 @@ export default function Login({ setToken }) {
   const handleLogin = async (e) => {
     e.preventDefault()
     try {
-      const res = await axios.post('/api/admin/login', { password })
+      const res = await axios.post('/api/auth/login', { password })
       if (res.data.success) {
         setToken(res.data.token)
       } else {

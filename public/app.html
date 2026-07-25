@@ -732,18 +732,24 @@ window.fetch = async function() {
             for (let d in dailyData) {
                 const dateParts = d.split('-');
                 const formattedDate = dateParts.length === 3 ? `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}` : d;
-                tableBody.push([formattedDate, formatHM(dailyData[d])]);
+                
+                let shiftsStr = '';
+                if (totals.dailyShifts && totals.dailyShifts[d]) {
+                    shiftsStr = totals.dailyShifts[d].map(s => `${s.in} - ${s.out}`).join('\n');
+                }
+                
+                tableBody.push([formattedDate, shiftsStr, formatHM(dailyData[d])]);
             }
 
-            tableBody.push(['', '']);
-            tableBody.push(['Total Hours:', formatHM(totals.totalHours)]);
-            tableBody.push(['Overtime:', formatHM(totals.overtimeHours)]);
-            tableBody.push(['Saturday Hours:', formatHM(totals.saturdayHours)]);
-            tableBody.push(['Night Hours:', formatHM(totals.nightHours)]);
+            tableBody.push(['', '', '']);
+            tableBody.push(['Total Hours:', '', formatHM(totals.totalHours)]);
+            tableBody.push(['Overtime:', '', formatHM(totals.overtimeHours)]);
+            tableBody.push(['Saturday Hours:', '', formatHM(totals.saturdayHours)]);
+            tableBody.push(['Night Hours:', '', formatHM(totals.nightHours)]);
 
             doc.autoTable({
                 startY: 30,
-                head: [['Date', 'Hours']],
+                head: [['Date', 'Shifts', 'Hours']],
                 body: tableBody,
                 theme: 'grid',
                 styles: { font: 'helvetica' }

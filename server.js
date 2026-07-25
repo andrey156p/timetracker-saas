@@ -1099,6 +1099,7 @@ app.get('/api/worker/report/:empId', async (req, res) => {
         let nightHours = 0;
         let saturdayHours = 0;
         let dailyHours = {}; // map date 'YYYY-MM-DD' -> hours
+        let dailyShifts = {}; // map date 'YYYY-MM-DD' -> [{in: 'HH:mm', out: 'HH:mm'}]
 
         let currentIn = null;
 
@@ -1133,6 +1134,21 @@ app.get('/api/worker/report/:empId', async (req, res) => {
 
                     mStart.setUTCMinutes(mStart.getUTCMinutes() + 1);
                 }
+                
+                // Add shift
+                const offsetMsIn = getLocalOffsetMs(currentIn);
+                const localIn = new Date(currentIn.getTime() + offsetMsIn);
+                const localOut = new Date(out.getTime() + offsetMsIn); // assuming same offset
+                
+                const shiftDateKey = localIn.toISOString().split('T')[0];
+                if (!dailyShifts[shiftDateKey]) dailyShifts[shiftDateKey] = [];
+                
+                const formatTime = (d) => d.toISOString().split('T')[1].substring(0, 5);
+                dailyShifts[shiftDateKey].push({
+                    in: formatTime(localIn),
+                    out: formatTime(localOut)
+                });
+
                 currentIn = null;
             }
         });
@@ -1150,7 +1166,8 @@ app.get('/api/worker/report/:empId', async (req, res) => {
             nightHours: nightHours.toFixed(2),
             saturdayHours: saturdayHours.toFixed(2),
             overtimeHours: overtimeHours.toFixed(2),
-            dailyData: dailyHours
+            dailyData: dailyHours,
+            dailyShifts: dailyShifts
         });
     } catch (e) {
         console.error(e);

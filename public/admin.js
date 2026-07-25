@@ -1420,7 +1420,7 @@ async function loadClientHours() {
                     html += `<tr class="border-b hover:bg-gray-50">
                         <td class="p-2 text-gray-500">${d.date || '-'}</td>
                         <td class="p-2 text-blue-600 font-mono text-xs cursor-pointer hover:underline" onclick="editManualShift('${d.empId}', '${d.date}', '${firstIn}', '${lastOut}')" title="Кликните чтобы изменить время">${d.times || '-'}</td>
-                        <td class="p-2 font-bold text-blue-600">${formatHM(parseFloat(d.totalHours || 0))}</td>
+                        <td class="p-2 font-bold text-blue-600 cursor-pointer hover:underline" onclick="editManualShift('${d.empId}', '${d.date}', '${firstIn}', '${lastOut}')" title="Кликните чтобы изменить время">${formatHM(parseFloat(d.totalHours || 0))}</td>
                         <td class="p-2 text-indigo-600">${formatHM(parseFloat(d.nightHours || 0))}</td>
                         <td class="p-2 text-purple-600">${formatHM(parseFloat(d.saturdayHours || 0))}</td>
                         <td class="p-2 font-bold text-red-600">${formatHM(parseFloat(d.overtimeHours || 0))}</td>
@@ -1490,8 +1490,8 @@ async function editManualShift(empId, date, currentIn, currentOut) {
             const r = await res.json();
             if (r.success) {
                 Swal.fire('Успешно', 'Смена обновлена вручную', 'success');
-                if (typeof renderClientAnalytics === 'function') {
-                    renderClientAnalytics(); // refresh table
+                if (typeof loadClientHours === 'function') {
+                    loadClientHours(); // refresh table
                 }
             } else {
                 Swal.fire('Ошибка', r.error || 'Не удалось обновить смену', 'error');

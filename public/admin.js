@@ -1143,7 +1143,6 @@ async function openNotesModal(empId, initialDate = null) {
                 // For now, we will let loadClientHours run, but we will patch loadClientHours to not clear HTML!
                 loadClientHours(true); // Pass true to prevent loading text
             }
-            if (typeof renderClientAnalytics === 'function') renderClientAnalytics();
         } else {
             Swal.fire({ icon: 'error', title: 'Ошибка сохранения' });
         }
